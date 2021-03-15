@@ -69,7 +69,8 @@ instance HasTypeVar VPattern where
     VPSeqVar var op   -> VPSeqVar var op
     VPLit v           -> VPLit v
     VPWildCard        -> VPWildCard
-    VPType pat        -> VPType pat 
+    VPType pat        -> VPType pat
+    VPEmptySet        -> VPEmptySet 
 
 instance HasTypeVar FPattern where
   subsTypeVarWildcard mt env pat = case pat of

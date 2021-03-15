@@ -10,6 +10,7 @@ import Funcons.Types
 import Funcons.Substitution
 import Funcons.Exceptions
 import Funcons.Operations (isGround)
+import Funcons.RunOptions (SourceOfND(..))
 
 import Control.Applicative
 import Control.Monad (foldM, forM)
@@ -61,10 +62,10 @@ seqMatcher p level (var, op, mty) str k env = case op of
                         Nothing   -> compare      -- no annotation => shortest match
                         Just  _   -> flip compare -- annoration => longest match
 
-matching :: (a -> String) -> [a] -> [Matcher a] -> Env -> Rewrite Env
-matching show str ps env = do 
+matching :: String -> (a -> String) -> [a] -> [Matcher a] -> Env -> Rewrite Env
+matching pats show str ps env = do 
     matches <- foldr seqWith lastMatcher ps str 0 env 
-    let rule_fail = PatternMismatch ("Pattern match failed: " ++ intercalate "," (map show str))
+    let rule_fail = PatternMismatch ("Pattern match failed: " ++ intercalate "," (map show str) ++ " does not match " ++ pats)
     case matches of
         [] -> rewrite_throw rule_fail
         [(_,env')] -> return env'
@@ -76,10 +77,14 @@ matching show str ps env = do
                                 | otherwise    = return []
 
             seqWith :: Matcher a -> Matcher a -> Matcher a
-            seqWith p q str k env = p str k env >>= foldM acceptFirst []
-             where  acceptFirst acc (r, env)
-                        | null acc  = q str r env
-                        | otherwise = return acc
+            seqWith p q str k env = p str k env >>= acceptFirst
+             where  acceptFirst [] = return []
+                    acceptFirst xs@((r,env):rest) = do
+--                    requires backtracking between premises and pattern matching to avoid unnecessary failure
+                      ((r, env),rest) <- maybe_randomRemove NDPatternMatching xs
+                      res <- q str r env
+                      case res of []  -> acceptFirst rest
+                                  _   -> return res
 
 ordered_subsequences :: [a] -> [[a]]
 ordered_subsequences xs = ordered_subsequences' xs []
@@ -110,6 +115,7 @@ data VPattern   = PADT Name [VPattern]
                 | VPAnnotated VPattern FTerm 
                 | VPSeqVar MetaVar SeqSortOp
                 | VPLit Values 
+                | VPEmptySet
                 | VPType TPattern
                 deriving (Show, Eq, Ord, Read)
 
@@ -120,7 +126,8 @@ v2tPattern (VPSeqVar var op) = Just $ TPSeqVar var op
 v2tPattern (PADT cons pats) = TPADT cons <$> mapM v2tPattern pats
 v2tPattern (VPLit lit) = Just $ TPLit (TFuncon (FValue lit))
 v2tPattern VPWildCard = Just TPWildCard
---v2tPattern (PList _) = Nothing  
+--v2tPattern (PList _) = Nothing 
+v2tPattern VPEmptySet = Nothing 
 v2tPattern (VPAnnotated fp t) = Nothing 
 
 -- required for "matching" lazy arguments (fields) of adt constructors
@@ -135,6 +142,7 @@ substitute_patt_signal :: VPattern -> Env -> Rewrite VPattern
 substitute_patt_signal vpat env = case vpat of 
   PADT name vpats -> PADT name <$> subs_flatten vpats env
   VPWildCard      -> return VPWildCard
+  VPEmptySet      -> return VPEmptySet
 --  PList pats      -> PList <$> subs_flatten pats env
   VPMetaVar var   -> case M.lookup var env of
                       Nothing -> return (VPMetaVar var)
@@ -181,7 +189,7 @@ strict_vsMatch str pats env
   | all isSort_ str 
   , Just tpats <- sequence (map v2tPattern pats)
         = tsMatch (map (downcastSort . FValue) str) tpats env 
-  | otherwise = matching showValues str matchers env
+  | otherwise = matching (show pats) showValues str matchers env
         where   matchers = map toMatcher pats
                 toMatcher pat = case vpSeqVarInfo pat of
                     Just info   -> seqMatcher isInMaybeTermTypePreserve ValuesTerm info
@@ -208,7 +216,7 @@ fsMatchStrictness strict str pats env
     | not strict && all (not.hasStep) str = 
           let downValues vs = map downcastValue vs
           in vsMatch (downValues str) (map f2vPattern pats) env
-    | otherwise = matching showFuncons str matchers env
+    | otherwise = matching (show pats) showFuncons str matchers env
     where   matchers = map toMatcher pats
             toMatcher pat = case fpSeqVarInfo pat of
                 Just info   -> seqMatcher rewritesToAnnotatedType FunconsTerm info
@@ -250,6 +258,8 @@ vMatch :: Values -> VPattern -> Env -> Rewrite Env
 vMatch (ADTVal str vs) (PADT "datatype-value" pats) env = 
   adtMatch "" "" (string_ (unpack str):vs) pats env
 vMatch _ (VPWildCard) env = return env
+vMatch (Set s) VPEmptySet env | null s = return env
+vMatch (Map m) VPEmptySet env | null m = return env
 vMatch VAny _ env = return env
 vMatch v (VPMetaVar var) env = return (envInsert var (ValueTerm v) env)
 vMatch (ADTVal str vs) (PADT con pats) env = adtMatch str con vs pats env
@@ -273,7 +283,7 @@ tsMatch :: [ComputationTypes] -> [TPattern] -> Env -> Rewrite Env
 tsMatch = strict_tsMatch
 
 strict_tsMatch :: [ComputationTypes] -> [TPattern] -> Env -> Rewrite Env
-strict_tsMatch str pats env = matching showSorts str matchers env
+strict_tsMatch str pats env = matching (show pats) showSorts str matchers env
         where   matchers = map toMatcher pats
                 toMatcher pat = case tpSeqVarInfo pat of
                   Nothing -> singleMatcher tMatch pat 
@@ -527,6 +537,7 @@ vpat2term vpat = case vpat of
   PADT cons pats    -> case pats of [] -> TName cons
                                     _  -> TApp cons (map vpat2term pats)
   VPLit lit         -> TFuncon $ (FValue lit) 
+  VPEmptySet        -> TFuncon $ (FValue (set__ []))
   VPWildCard        -> TAny
 --  PList pats        -> TList (map vpat2term pats)
   VPMetaVar var     -> TVar var

@@ -17,8 +17,8 @@ stepInitialise_generating fargs =
     where step1 = do
             let env = emptyEnv
             env <- lifted_fsMatch fargs [PMetaVar "P"] env
-            env <- getMutPatt "used-atom-set" (VPWildCard) env
-            putMut "used-atom-set" reserved_atoms
+            env <- getMutPatt "used-atom-set" [VPWildCard] env
+            putMut "used-atom-set" [reserved_atoms]
             stepTermTo (TVar "P") env
           reserved_atoms = Set (fromList [])
 

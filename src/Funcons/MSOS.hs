@@ -27,7 +27,8 @@ module Funcons.MSOS (
           , stepTrans, rewritesToValue, rewritesToValues, rewritesToType
           , emptyDCTRL, emptyINH, Interactive(..), SimIO(..)
           , rewriteToValErr, count_delegation, optRefocus
-          , evalStrictSequence, rewriteStrictSequence, evalSequence,
+          , evalStrictSequence, rewriteStrictSequence, evalSequence
+          , maybe_randomSelect, maybe_randomRemove,
     -- * Values
         showTypes, showSorts, showValues, showValuesSeq, showFuncons, showFunconsSeq,traceLib,
     -- * Funcon libraries
@@ -49,14 +50,17 @@ import Control.Applicative
 import Control.Arrow ((***))
 import Control.Monad.Writer hiding ((<>))
 import Control.Monad.Fail
+import Data.Function (on)
 import Data.Maybe (isJust, isNothing, fromJust)
-import Data.List (foldl', intercalate)
+import Data.List (foldl', intercalate, partition, sortBy)
 import Data.Text (unpack)
 import Data.Semigroup
 
 import qualified Data.Map as M
 
+import System.Random
 import System.IO.Unsafe
+
 --trace p b = unsafePerformIO (putStrLn p >> return b) 
 trace p b = b
 traceLib :: FunconLibrary -> FunconLibrary
@@ -78,21 +82,29 @@ fromNullaryValOp :: ([Funcons] -> Funcons) -> ([OpExpr Funcons] -> OpExpr Funcon
 fromNullaryValOp cons mkExpr = NullaryFuncon op
   where op = report (cons []) False (VAL.eval (mkExpr []))
 
+report :: Funcons -> Bool -> EvalResult Funcons -> Rewrite Rewritten 
 report f seqRes res = case res of
-  Error _ (VAL.SortErr str)   -> sortErr f str
-  Error _ (DomErr str)        -> rewrittens [] 
-  Error _ (ArityErr str)      -> sortErr f str
-  Error _ (ProjErr str)       -> sortErr f str
-  Error _ (Normal (FValue v)) -> rewritten' v
-  Error _ (Normal t)          -> rewriteFuncons t
+  Error _ dres                -> reportResult dres
   Success (FValue (ADTVal "null" _)) -> rewrittens []
   Success (FValue v)          -> rewritten' v
   Success t                   -> rewriteFuncons t
+  EvalResults ress            -> maybe_randomSelect NDValueOperations ress >>= 
+                                  report f seqRes 
   where rewritten' v | seqRes, ValSeq fs <- v, 
                         let mvs = map project fs, all isJust mvs
                         = rewrittens (map fromJust mvs)
                      | otherwise = rewritten v
- 
+        reportResult dres = case dres of 
+          (VAL.SortErr str)   -> sortErr f str
+          (DomErr str)        -> rewrittens [] 
+          (ArityErr str)      -> sortErr f str
+          (ProjErr str)       -> sortErr f str
+          (Normal (FValue v)) -> rewritten' v
+          (Normal t)          -> rewriteFuncons t
+          (Nondeterministic ress) -> case ress of 
+            []    -> sortErr f "nondeterminism: empty"
+            _     -> randomSelect ress >>= reportResult
+
 -- |
 -- Evaluation functions capture the operational behaviour of a funcon.
 -- Evaluation functions come in multiple flavours, each with a different
@@ -182,8 +194,8 @@ data RewriteReader = RewriteReader
                     { funconlib  :: FunconLibrary    
                     , ty_env     :: TypeRelation, run_opts :: RunOptions
                     , global_fct :: Funcons, local_fct :: Funcons }
-data RewriteState = RewriteState {  }
-emptyRewriteState = RewriteState 
+data RewriteState = RewriteState { random_gen :: StdGen }
+emptyRewriteState = RewriteState (mkStdGen 0)
 data RewriteWriterr = RewriteWriterr { counters :: Counters }
 
 -- | Monadic type for the implicit propagation of meta-information on
@@ -271,8 +283,9 @@ data MSOSWriter = MSOSWriter { ctrl_entities :: Control, out_entities :: Output
                              , ewriter :: RewriteWriterr }
 data MSOSState m = MSOSState { inp_es :: Input m, mut_entities :: Mutable
                              , estate :: RewriteState }
-emptyMSOSState :: MSOSState m
-emptyMSOSState = MSOSState M.empty M.empty emptyRewriteState
+emptyMSOSState :: Int -> MSOSState m
+emptyMSOSState seed = 
+  MSOSState M.empty M.empty (emptyRewriteState { random_gen = mkStdGen seed })
 
 -- | Monadic type for the propagation of semantic entities and meta-information
 -- on the evaluation of funcons. The meta-information includes a library 
@@ -332,13 +345,15 @@ instance Monoid MSOSWriter where
         MSOSWriter (x1 `unionCTRL` y1) (x2 `unionOUT` y2) (x3 `mappend` y3) 
 
 -- | A map storing the values of /mutable/ entities.
-type Mutable      = M.Map Name Values
+type Mutable      = M.Map Name [Values]
 
 stepRules = stepARules NoMoreBranches count_backtrack_in
 
 stepARules :: ([IException] -> IE) -> Rewrite () -> [IException] -> [MSOS StepRes] -> MSOS StepRes
 stepARules fexc _ errs [] = msos_throw (fexc errs)
-stepARules fexc counter errs (t1:ts) = MSOS $ \ctxt mut -> do 
+stepARules fexc counter errs ts = 
+ liftRewrite (maybe_randomRemove NDRuleSelection ts) >>= 
+  \(t1,ts) -> MSOS $ \ctxt mut -> do 
     (e_ie_a, mut', wr) <- runMSOS t1 ctxt mut 
     case e_ie_a of
         Left ie | failsRule ie -> -- resets input & read/write entities
@@ -368,7 +383,9 @@ stepARules fexc counter errs (t1:ts) = MSOS $ \ctxt mut -> do
 evalRules = evalRules' []
 evalRules' :: [IException] -> [Rewrite Rewritten] -> [MSOS StepRes] -> Rewrite Rewritten
 evalRules' errs [] msoss = buildStep (stepARules NoRule count_backtrack_out errs msoss)
-evalRules' errs ((Rewrite rw_rules):rest) msoss = Rewrite $ \ctxt st -> 
+evalRules' errs rules msoss = 
+ maybe_randomRemove NDRuleSelection rules >>= \((Rewrite rw_rules),rest) -> 
+  Rewrite $ \ctxt st -> 
     let (rw_res, st', wo) = rw_rules ctxt st
     in case rw_res of
         Left ie | failsRule ie  -> --resets counters and state 
@@ -382,9 +399,9 @@ msos_throw :: IE -> MSOS b
 msos_throw = liftRewrite . rewrite_throw 
 
 ---
-giveOpts :: MSOS RunOptions 
-giveOpts = MSOS $ \ctxt mut -> 
-    return (Right (run_opts (ereader ctxt)), mut, mempty)
+
+giveOpts :: Rewrite RunOptions 
+giveOpts = Rewrite $ \ctxt mut -> (Right (run_opts ctxt), mut, mempty)
 
 giveINH :: MSOS Inherited
 giveINH = MSOS $ \ctxt mut -> return (Right (inh_entities ctxt), mut, mempty)
@@ -402,6 +419,43 @@ modifyRewriteCTXT mod (Rewrite f) = Rewrite (f . mod)
 modifyRewriteReader :: (RewriteReader -> RewriteReader) -> MSOS a -> MSOS a
 modifyRewriteReader mod (MSOS f) = MSOS (f . mod')
   where mod' ctxt = ctxt { ereader = mod (ereader ctxt) }
+
+maybe_randomRemove :: SourceOfND -> [a] -> Rewrite (a, [a])
+maybe_randomRemove _ [] = randomRemove []
+maybe_randomRemove src xs@(x:xs') = do
+  opts <- giveOpts
+  if src `elem` get_nd_sources opts then randomRemove xs
+                                    else return (x, xs')
+
+-- | Uses the random number generator of Rewrite to randomly select
+-- an element of a given list. The element is returned, together
+-- with the list from which the element has been removed
+-- Raises an internal exception if given an empty list
+randomRemove :: [a] -> Rewrite (a, [a])
+randomRemove [] = internal "randomRemove: empty list"
+randomRemove [x]= return (x, [])
+randomRemove xs = Rewrite $ \_ mut -> 
+  let gen       = random_gen mut 
+      (i, gen') = next gen
+      index     = i `mod` (length xs)
+      elem      = xs !! index 
+      rest      = take index xs ++ drop (index + 1) xs 
+  in (Right (elem, rest), mut {random_gen = gen'}, mempty )
+
+maybe_randomSelect src xs = fst <$> maybe_randomRemove src xs
+randomSelect xs = fst <$> randomRemove xs
+
+{-
+randomSelect :: [a] -> Rewrite a
+randomSelect xs = Rewrite $ \_ mut -> 
+  let gen       = random_gen mut 
+      (_, top)  = genRange gen
+      unit      = fromIntegral top / fromIntegral (length xs)
+      (i, gen') = next gen
+      index     = round (fromIntegral i / unit)
+  in (Right (xs !! index), mut {random_gen = gen'}, mempty )
+-}
+
 -----------------
 -- | a map storing the values of /inherited/ entities.
 type Inherited       = M.Map Name [Values]
@@ -808,22 +862,36 @@ evalStrictSequence args cont cons =
 
 evalSequence :: [Strictness] -> [Funcons] -> 
     ([Funcons] -> Rewrite Rewritten) -> ([Funcons] -> Funcons) -> Rewrite Rewritten
-evalSequence strns args cont cons = 
-    uncurry evalSeqAux $ map snd *** id $ span isDone (zip strns args)
- where  unmatched = drop (length strns) args
-        evalSeqAux :: [Funcons] -> [(Strictness, Funcons)] -> Rewrite Rewritten
-        evalSeqAux vs [] = cont vs
-        evalSeqAux vs ((_,f):fs) = premiseEval valueCont funconCont f
-         where  valueCont vs' = do 
-                    count_rewrite
-                    evalSeqAux (vs++(map FValue vs' ++ map snd othervs)) otherfs
-                 where (othervs, otherfs) = span isDone fs
-                funconCont stepf = stepf >>= \case  
-                  Left f' -> stepTo (cons (vs++[f']++map snd fs))
-                  Right vs' -> stepTo (cons (vs++(map FValue vs')++map snd fs))
+evalSequence strns args cont cons = do
+    let args_map = zip [1..] (zip strns args)
+
+    let evalSeqAux args_done args_undone 
+          | null args_undone = cont (map (snd . snd) (sorter args_done))
+          | otherwise        = do
+              ((i,(_,f)), args_undone') <- 
+                maybe_randomRemove NDInterleaving args_undone
+              let valueCont vs = do 
+                    count_rewrite 
+                    evalSeqAux args_done' (map bump args_undone')
+                    where args_done' = filter ((<i) . fst) args_done ++
+                                        zip [i..] ((zip (replicate (length vs) Strict) 
+                                                          (map FValue vs))) ++
+                                       map bump (filter ((>i) . fst) args_done)
+                          bump (k,v) | k > i      = (k + length vs - 1, v)
+                                     | otherwise  = (k,v)
+              let funconCont stepf = stepf >>= \case 
+                    Left f' -> stepTo (cons (remakeArgs args_done [f'] args_undone'))
+                    Right vs' -> stepTo (cons (remakeArgs args_done (map FValue vs') args_undone'))
+                   where remakeArgs m1 l1 m2 =  
+                          map (snd . snd) (sorter (filter ((<i) . fst) (m1++m2))) ++ l1 ++
+                          map (snd . snd) (sorter (filter ((>i) . fst) (m1++m2)))
+
+              premiseEval valueCont funconCont f          
+    uncurry evalSeqAux (partition (isDone . snd) args_map)
+ where  isDone (NonStrict, _)     = True
         isDone (Strict, FValue _) = True
-        isDone (NonStrict, _) = True
-        isDone _ = False
+        isDone (Strict,_)         = False
+        sorter = sortBy (compare `on` fst)
 
 -- | Yield an 'MSOS' computation as a fully rewritten term.
 -- This function must be used in order to access entities in the definition

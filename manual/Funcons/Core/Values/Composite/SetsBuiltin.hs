@@ -7,9 +7,6 @@ import qualified Funcons.Operations as VAL
 
 import qualified Data.Set as S
 
-import Test.RandomStrings (randomString', randomASCII)
-import System.IO.Unsafe (unsafePerformIO)
-
 library = libFromList [
     ("set", fromValOp set_ VAL.set_)
   , ("set-empty", fromNullaryValOp set_empty_ VAL.set_empty_)

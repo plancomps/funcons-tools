@@ -13,7 +13,7 @@ module Funcons.EDSL (
     -- *** Funcon terms
         set_, vec_, env_fromlist_, null__,
     -- *** Values
-        int_, bool_, bool__, list__, vector__, tuple__, char_, char__, nat_, float_, ieee_float_32_, ieee_float_64_, string_, string__, atom_,
+        int_, bool_, bool__, list__, set__, empty_set__, vector__, tuple__, char_, char__, nat_, float_, ieee_float_32_, ieee_float_64_, string_, string__, atom_,
     -- *** Types
         values_, integers_, vectors_, type_, ty_star, ty_plus, ty_opt, ty_union, ty_neg, ty_inter, ty_power,
     -- ** Pretty-print funcon terms

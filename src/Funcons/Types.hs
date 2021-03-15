@@ -184,6 +184,9 @@ char__ = mk_unicode_characters
 list__ :: [Values] -> Values
 list__ = VAL.list
 
+set__ :: [Values] -> Values
+set__ = VAL.set
+
 vector__ :: [Values] -> Values
 vector__ = VAL.vector
 
@@ -206,7 +209,10 @@ map_empty_ = empty_map_
 
 -- | The empty set as a 'Funcons'.
 empty_set_ :: Funcons
-empty_set_ = FValue (Set S.empty)
+empty_set_ = FValue empty_set__ 
+
+empty_set__ :: Values
+empty_set__ = Set S.empty
 
 -- | Creates a tuple of funcon terms.
 --tuple_ :: [Funcons] -> Funcons
