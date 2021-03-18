@@ -82,18 +82,18 @@ mk_initial_config lib defaults tyenv opts = do
   where f0 = initialise_binding_ [initialise_storing_ [map_empty_ []]]
         init msos_reader = msos_reader {inh_entities = M.insert "environment" [Map M.empty] (inh_entities msos_reader) }
 
-def_interpreter :: IORef RunOptions -> Funcons -> Config -> IO Config
+def_interpreter :: IORef RunOptions -> Funcons -> Config -> IO (Maybe Config)
 def_interpreter opts_ref f0 cfg = do
   opts <- readIORef opts_ref
   let msos_ctxt = (reader cfg) { ereader = (ereader (reader cfg)) { local_fct = f0, global_fct = f0 } }
   (e_exc_f, mut, wr) <- runMSOS (stepTrans opts 0 (toStepRes f0)) msos_ctxt (state cfg)
   case e_exc_f of
-    Left ie    -> putStrLn (showIException ie) >> return cfg
-    Right (Left fct) -> return cfg { state = mut } -- did not yield an environment
+    Left ie    -> putStrLn (showIException ie) >> return Nothing 
+    Right (Left fct) -> return $ Just $ cfg { state = mut } -- did not yield an environment
     Right (Right efvs) -> case filter isMap efvs of
-      []    -> return $ cfg { state = mut }
-      [env] -> return $ cfg { reader = accumulate (reader cfg) env, state = mut } 
-      _     -> putStrLn ("multiple environments computed") >> return cfg
+      []    -> return $ Just $ cfg { state = mut }
+      [env] -> return $ Just $ cfg { reader = accumulate (reader cfg) env, state = mut } 
+      _     -> putStrLn ("multiple environments computed") >> return Nothing
   where accumulate msos_reader env = msos_reader { inh_entities = M.update override "environment" (inh_entities msos_reader) }
           where override [old_env] = case (env, old_env) of 
                   (Map m1, Map m2) -> Just [Map (M.union m1 m2)] 

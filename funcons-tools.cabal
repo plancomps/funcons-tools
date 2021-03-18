@@ -154,7 +154,7 @@ executable funcons-repl
                         ,regex-applicative
                         ,random-strings
                         ,funcons-values >= 0.1.0.5
-                        ,exploring-interpreters >= 0.2.0.0
+                        ,exploring-interpreters >= 0.3.0.0
    hs-source-dirs:      src, manual, cbs
    default-language:    Haskell2010
  --  ghc-options:         -rtsopts
