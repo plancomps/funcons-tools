@@ -40,15 +40,16 @@ handle_revert r exp =
   case EI.revert r exp of
     Just e -> return e
     Nothing -> putStrLn "Invalid reference for revert" >> return exp
-    
 
 repl :: IO ()
 repl = getArgs >>= mk_explorer >>= repl'
  where 
   repl' exp = do
+   hFlush stdout
    readline ("#" ++ show (EI.currRef exp) ++ " > ") >>= \case 
     Nothing    -> return ()
-    Just input -> 
+    Just input -> do
+      addHistory input 
       case break isSpace input of
         (":session", _)   -> do
           (putStrLn . drawTree . fmap (show . fst) . EI.toTree) exp

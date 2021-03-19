@@ -57,6 +57,7 @@ library
                       ,regex-applicative
                       ,random-strings
                       ,funcons-values >= 0.1.0.5
+                      ,readline >= 1.0.3.0
   hs-source-dirs:      src, cbs, manual
   default-language:    Haskell2010
   other-extensions:    OverloadedStrings
