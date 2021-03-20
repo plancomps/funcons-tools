@@ -19,7 +19,7 @@ and produce the following interaction:
 { "input" |-> "Hello world" }
 #2> string-append(bound("input"),"!")
 { "it" |-> "Hello world!" }
-#3> print-line(bound("it"),"\n")
+#3> print(bound("it"),"\n")
 Hello world!
 #4>
 ```
