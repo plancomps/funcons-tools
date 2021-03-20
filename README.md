@@ -16,7 +16,8 @@ and produce the following interaction:
 ```
 #1> bind("input", read)
 > "Hello world"
-#2> print(bound("input"))
+{ "input" |-> "Hello world" }
+#2> print-line(bound("input"))
 Hello world
 #3> 
 ```
