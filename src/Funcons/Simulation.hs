@@ -10,7 +10,7 @@ import Funcons.RunOptions
 
 import Control.Applicative
 import Control.Monad.State
-import System.Console.Readline
+import System.Console.Haskeline
 import qualified Data.Map as M
 import Data.Text (unpack)
 
@@ -22,10 +22,10 @@ class Monad m => Interactive m where
 instance Interactive IO where
     fexec ma _ = (,M.empty) <$> ma
 
-    fread str_inp nm = do
-        mLine <- readline prompt 
+    fread str_inp nm = runInputT defaultSettings $ do
+        mLine <- getInputLine prompt 
         case mLine of Nothing -> return (string_ "")
-                      Just s  -> addHistory s >> return (toFuncon s)
+                      Just s  -> return (toFuncon s)
         where   toFuncon  str | str_inp   = string_ str
                               | otherwise = fvalue_parse str
                 prompt | nm == "standard-in" = "\n> "

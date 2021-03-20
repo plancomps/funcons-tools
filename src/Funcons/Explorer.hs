@@ -23,7 +23,9 @@ import Data.Char (isSpace)
 import Data.Tree (drawTree)
 import Text.Read (readMaybe)
 
-import System.Console.Readline
+import Control.Monad.Trans.Class (lift) 
+import System.Console.Haskeline
+import System.Console.Haskeline.History
 import System.Environment
 import System.IO
 
@@ -42,24 +44,22 @@ handle_revert r exp =
     Nothing -> putStrLn "Invalid reference for revert" >> return exp
 
 repl :: IO ()
-repl = getArgs >>= mk_explorer >>= repl'
+repl = getArgs >>= mk_explorer >>= (runInputT defaultSettings . repl')
  where 
   repl' exp = do
-   hFlush stdout
-   readline ("#" ++ show (EI.currRef exp) ++ " > ") >>= \case 
+   getInputLine ("#" ++ show (EI.currRef exp) ++ " > ") >>= \case 
     Nothing    -> return ()
     Just input -> do
-      addHistory input 
       case break isSpace input of
         (":session", _)   -> do
-          (putStrLn . drawTree . fmap (show . fst) . EI.toTree) exp
+          (outputStrLn . drawTree . fmap (show . fst) . EI.toTree) exp
           repl' exp
         (":revert", mint) | Just ref_id' <- readMaybe (dropWhile isSpace mint)
-                          -> handle_revert ref_id' exp  >>= repl'
-                          | otherwise -> putStrLn "Revert requires an integer argument" >> repl' exp
+                          -> lift (handle_revert ref_id' exp)  >>= repl'
+                          | otherwise -> outputStrLn "Revert requires an integer argument" >> repl' exp
         _                 -> case fct_parse_either input of 
-                                 Left err  -> putStrLn err >> repl' exp 
-                                 Right fct -> EI.execute fct exp >>= (repl'  . fst)
+                                 Left err  -> outputStrLn err >> repl' exp 
+                                 Right fct -> lift (EI.execute fct exp) >>= (repl'  . fst)
 
   
 mk_explorer :: [String] -> IO Explorer 
