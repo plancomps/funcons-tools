@@ -157,7 +157,6 @@ executable funcons-repl
                         ,funcons-values >= 0.1.0.5
                         ,exploring-interpreters >= 0.3.0.0
                         ,readline >= 1.0.3.0
->>>>>>> funcons-repl
    hs-source-dirs:      src, manual, cbs
    default-language:    Haskell2010
  --  ghc-options:         -rtsopts
