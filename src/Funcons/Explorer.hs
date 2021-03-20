@@ -86,7 +86,13 @@ mk_initial_config lib defaults tyenv opts = do
         init msos_reader = msos_reader {inh_entities = M.insert "environment" [Map M.empty] (inh_entities msos_reader) }
 
 def_interpreter :: IORef RunOptions -> Funcons -> Config -> IO (Maybe Config)
-def_interpreter opts_ref f0 cfg = do
+def_interpreter opts_ref f0' cfg = do
+  let f0 = give_ [f0', 
+             give_ [if_else_ [is_ [given_, environments_], given_
+                             ,if_else_ [is_ [given_, null_type_], given_
+                                       ,bind_ [Funcons.EDSL.string_ "it", given_]]]
+                   ,if_else_ [is_ [given_, null_type_], given_
+                             ,sequential_ [print_ [given_,Funcons.EDSL.string_ "\n"], given_]]]]
   opts <- readIORef opts_ref
   let msos_ctxt = (reader cfg) { ereader = (ereader (reader cfg)) { local_fct = f0, global_fct = f0 } }
   (e_exc_f, mut, wr) <- runMSOS (stepTrans opts 0 (toStepRes f0)) msos_ctxt (state cfg)
