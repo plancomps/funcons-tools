@@ -16,7 +16,10 @@ and produce the following interaction:
 ```
 #1> bind("input", read)
 > "Hello world"
-#2> print(bound("input"))
-Hello world
-#3> 
+{ "input" |-> "Hello world" }
+#2> string-append(bound("input"),"!")
+{ "it" |-> "Hello world!" }
+#3> print(bound("it"),"\n")
+Hello world!
+#4>
 ```

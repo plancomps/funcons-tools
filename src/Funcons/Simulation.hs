@@ -10,7 +10,7 @@ import Funcons.RunOptions
 
 import Control.Applicative
 import Control.Monad.State
-import System.IO (hFlush,stdout)
+import System.Console.Readline
 import qualified Data.Map as M
 import Data.Text (unpack)
 
@@ -22,12 +22,14 @@ class Monad m => Interactive m where
 instance Interactive IO where
     fexec ma _ = (,M.empty) <$> ma
 
-    fread str_inp nm = (case nm of
-        "standard-in" -> putStr "\n> " >> hFlush stdout
-        _ -> putStrLn ("Please provide input for " ++ unpack nm ++ ":"))
-                >> getLine >>= return . toFuncon
+    fread str_inp nm = do
+        mLine <- readline prompt 
+        case mLine of Nothing -> return (string_ "")
+                      Just s  -> addHistory s >> return (toFuncon s)
         where   toFuncon  str | str_inp   = string_ str
                               | otherwise = fvalue_parse str
+                prompt | nm == "standard-in" = "\n> "
+                       | otherwise =  "Please provide input for " ++ unpack nm ++ ":"
 
     fprint _ v | isString_ v  = putStr (unString v)
                | otherwise    = putStr (showValues v)
