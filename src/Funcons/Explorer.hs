@@ -16,11 +16,12 @@ import Funcons.Tools
 import Funcons.Parser
 import Funcons.Printer
 
-import Control.Monad (forM_)
+import Control.Monad (forM_, mapM_)
 import Data.IORef
 import qualified Data.Map as M
 import Data.Char (isSpace)
 import Data.Tree (drawTree)
+import Data.Text (pack)
 import Text.Read (readMaybe)
 
 import Control.Monad.Trans.Class (lift) 
@@ -44,13 +45,23 @@ handle_revert r exp =
     Nothing -> putStrLn "Invalid reference for revert" >> return exp
 
 repl :: IO ()
-repl = getArgs >>= mk_explorer >>= (runInputT defaultSettings . repl')
+repl = display_help >> getArgs >>= mk_explorer >>= (runInputT defaultSettings . repl')
  where 
   repl' exp = do
    getInputLine ("#" ++ show (EI.currRef exp) ++ " > ") >>= \case 
     Nothing    -> return ()
     Just input -> do
       case break isSpace input of
+        (":help",_)       -> lift display_help >> repl' exp
+        (":h",_)          -> lift display_help >> repl' exp
+        (":quit",_)       -> return ()
+        (":q",_)          -> return ()
+        (":env",_)        -> lift (display_environment (EI.config exp)) >> repl' exp 
+        (":environment",_)-> lift (display_environment (EI.config exp)) >> repl' exp
+        (":store",_)      -> lift (display_mut_entity (EI.config exp) "store") >> repl' exp
+        (":sto",_)        -> lift (display_mut_entity (EI.config exp) "store") >> repl' exp
+        (":mut", rest)    -> lift (display_mut_entity (EI.config exp) (dropWhile isSpace rest)) >> repl' exp 
+        (":mutable", rest)-> lift (display_mut_entity (EI.config exp) (dropWhile isSpace rest)) >> repl' exp 
         (":session", _)   -> do
           (outputStrLn . drawTree . fmap (show . fst) . EI.toTree) exp
           repl' exp
@@ -117,3 +128,26 @@ instance Eq (MSOSReader IO) where
 -- assumes input is not used // does not change per session
 instance Eq (MSOSState IO) where
   s1 == s2 = mut_entities s1 == mut_entities s2 
+
+display_environment :: Config -> IO ()
+display_environment cfg =
+  mapM_ (putStrLn . showValues) (inh_entities (reader cfg) M.! "environment")
+
+display_mut_entity :: Config -> String -> IO ()
+display_mut_entity cfg ent = 
+  case M.lookup (pack ent) (mut_entities (state cfg)) of 
+    Nothing -> putStrLn ("unknown mutable entity: " ++ ent)
+    Just v  -> putStrLn $ showValues v
+
+display_help :: IO ()
+display_help =
+  putStrLn  "Available commands:\n\
+            \  :environment :env    show the active bindings from identifiers to values\n\
+            \  :store :sto          show the store with assignments to references\n\
+            \  :mutable :mut <ENT>  show the mutable entity with name <ENT>\n\
+            \  :session             displays the explored traces in the form of a tree\n\
+            \                       with nodes labelled by state identifiers\n\
+            \  :revert <INT>        revert to the state with id <INT>\n\
+            \  :help :h             show these commands\n\
+            \  :quit :q             end the exploration\n\
+            \  or just type a funcon term"

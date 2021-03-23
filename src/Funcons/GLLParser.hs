@@ -42,7 +42,9 @@ allParses p string = GLL.Combinators.parseWithOptions [throwErrors] p
                         (Funcons.GLLParser.lexer string) 
 
 parsesWithErrors :: Parser a -> String -> Either String [a]
-parsesWithErrors p string = GLL.Combinators.parseWithOptionsAndError [] p (Funcons.GLLParser.lexer string)
+parsesWithErrors p string = case (Funcons.GLLParser.lexerEither string) of
+  Left err  -> Left err
+  Right ts  -> GLL.Combinators.parseWithOptionsAndError [] p ts
 
 fct_lexerSettings = emptyLanguage {
     lineComment = "//"
@@ -52,6 +54,7 @@ fct_lexerSettings = emptyLanguage {
   }
 
 lexer = GLL.Combinators.lexer fct_lexerSettings
+lexerEither = GLL.Combinators.lexerEither fct_lexerSettings
 
 fct_keywords = ["void", "depends", "forall", "type_abs"
                ,"typevar", "?", "*", "+", "|->", "=>"]
