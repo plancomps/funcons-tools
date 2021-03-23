@@ -5,7 +5,7 @@ module Funcons.Simulation where
 import Funcons.Types
 import Funcons.Exceptions
 import Funcons.Printer
-import Funcons.Parser (fvalue_parse)
+import Funcons.Parser (fvalue_parse_either)
 import Funcons.RunOptions
 
 import Control.Applicative
@@ -25,11 +25,13 @@ instance Interactive IO where
     fread str_inp nm = runInputT defaultSettings $ do
         mLine <- getInputLine prompt 
         case mLine of Nothing -> return (string_ "")
-                      Just s  -> return (toFuncon s)
-        where   toFuncon  str | str_inp   = string_ str
-                              | otherwise = fvalue_parse str
-                prompt | nm == "standard-in" = "\n> "
-                       | otherwise =  "Please provide input for " ++ unpack nm ++ ":"
+                      Just s  -> toFuncon s
+        where   toFuncon  str | str_inp   = return (string_ str)
+                              | otherwise = case fvalue_parse_either str of
+                                  Left err -> lift (putStrLn err >> fread str_inp nm)
+                                  Right f  -> return f
+                prompt | nm == "standard-in" = "Please provide a literal value\n> "
+                       | otherwise =  "Please provide a literal value for " ++ unpack nm ++ ":"
 
     fprint _ v | isString_ v  = putStr (unString v)
                | otherwise    = putStr (showValues v)

@@ -25,8 +25,18 @@ fct_parse_either s = case parsesWithErrors pFuncons s of
 fvalue_parse :: String -> Funcons
 fvalue_parse = FValue . fvalue_parse_ 
 
+fvalue_parse_either :: String -> Either String Funcons
+fvalue_parse_either = fmap FValue . fvalue_parse_either_
+
 fvalue_parse_ :: String -> Values
 fvalue_parse_ = parser_a pValues
+
+fvalue_parse_either_ :: String -> Either String Values
+fvalue_parse_either_ str = case parsesWithErrors pValues str of 
+  Left err  -> Left err
+  Right []  -> Left "no parse result"
+  Right [f] -> Right f
+  Right fs  -> Left "ambiguous parse result"
 
 parse :: Parser a -> String -> a
 parse p str = case allParses p str of []    -> error "no parse"
