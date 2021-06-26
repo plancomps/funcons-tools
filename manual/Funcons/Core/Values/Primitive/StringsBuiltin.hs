@@ -3,7 +3,6 @@
 module Funcons.Core.Values.Primitive.StringsBuiltin where
 
 import Funcons.EDSL
-import Funcons.Types hiding (stepTo_String, to_string_)
 import qualified Funcons.Operations as VAL
 
 library = libFromList [

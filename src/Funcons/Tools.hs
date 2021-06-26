@@ -27,14 +27,13 @@ import Funcons.MSOS
 import Funcons.Core.Library
 import Funcons.Core.Manual
 import Funcons.Printer
-import Funcons.Parser
 
 import System.Environment (getArgs)
 
 import Data.Text (unpack)
 import Data.List ((\\), intercalate)
 import qualified Data.Map as M
-import Control.Monad (forM_, when, unless,join)
+import Control.Monad (forM_, when, unless)
 
 -- | The empty collection of entity defaults.
 noEntityDefaults :: [EntityDefault]

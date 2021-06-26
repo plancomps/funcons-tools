@@ -1,7 +1,7 @@
 module Funcons.Core.Manual (
     Funcons.Core.Manual.library
     , module Funcons.Core.Computations.Normal.GeneratingBuiltin
-    , module Funcons.Core.Computations.AbnormalBuiltin
+--    , module Funcons.Core.Computations.AbnormalBuiltin
     , module Funcons.Core.Values.Composite.SetsBuiltin 
     , module Funcons.Core.Values.Composite.MultisetsBuiltin 
 --    , module Funcons.Core.Values.Composite.ListsBuiltin 
