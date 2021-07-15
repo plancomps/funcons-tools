@@ -113,7 +113,9 @@ def_interpreter opts_ref phrase cfg = do
   opts <- readIORef opts_ref 
   case phrase of FTerm f0' -> let f0 = prep_term f0'
                               in fmap (setProgress done) <$> exec (loop opts) f0 (prep_ctxt f0)
-                 Debug f0' -> mk_step opts (prep_term f0')
+                 Debug f0' -> let f0 = prep_term f0'
+                              in putStrLn ("\nremaining funcon term:\n" ++ ppFuncons opts f0) 
+                              >> return (Just (cfg { progress = Left f0 }))
                  Step      -> case progress cfg of 
                                 Left fct  -> mk_step opts fct
                                 Right vs  -> putStrLn "already done.." >> return (Just cfg)
