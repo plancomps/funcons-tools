@@ -191,6 +191,9 @@ display_help =
             \  :session             displays the explored traces in the form of a tree\n\
             \                       with nodes labelled by state identifiers\n\
             \  :revert <INT>        revert to the state with id <INT>\n\
+            \  :debug <FCT>         start step-by-step execution of funcon term <FCT>\n\
+            \  :step                perform the next step in a step-by-step execution\n\
+            \  :finish              perform all remaining steps of a step-by-step execution\n\
             \  :help :h             show these commands\n\
             \  :quit :q             end the exploration\n\
             \  or just type a funcon term"
