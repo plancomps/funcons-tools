@@ -33,6 +33,8 @@ import System.IO
 data Phrase = FTerm Funcons
             | Debug Funcons
             | Step 
+            | SmallStep 
+            | PrettyBigStep 
             | Finish
       deriving (Show, Eq) 
 
@@ -79,6 +81,8 @@ repl = display_help >> getArgs >>= mk_explorer >>= (runInputT defaultSettings . 
                               Left err -> outputStrLn err >> repl' exp
                               Right fct -> lift (EI.execute (Debug fct) exp) >>= (repl' . fst)
         (":step", _)      -> lift (EI.execute Step exp) >>= (repl' . fst)
+        (":small-step", _)-> lift (EI.execute SmallStep exp) >>= (repl' . fst)
+        (":pretty-big-step", _)      -> lift (EI.execute PrettyBigStep exp) >>= (repl' . fst)
         (":finish", _)    -> lift (EI.execute Finish exp) >>= (repl' . fst)
         _                 -> case fct_parse_either input of 
                                  Left err  -> outputStrLn err >> repl' exp 
@@ -112,15 +116,21 @@ def_interpreter :: IORef RunOptions -> Phrase -> Config -> IO (Maybe Config)
 def_interpreter opts_ref phrase cfg = do 
   opts <- readIORef opts_ref 
   case phrase of FTerm f0' -> let f0 = prep_term f0'
-                              in fmap (setProgress done) <$> exec (loop opts) f0 (prep_ctxt f0)
+                              in fmap (setProgress done) <$> exec (loop opts) f0 (prep_ctxt f0 opts)
                  Debug f0' -> let f0 = prep_term f0'
                               in putStrLn ("\nremaining funcon term:\n" ++ ppFuncons opts f0) 
                               >> return (Just (cfg { progress = Left f0 }))
                  Step      -> case progress cfg of 
                                 Left fct  -> mk_step opts fct
                                 Right vs  -> putStrLn "already done.." >> return (Just cfg)
+                 SmallStep -> case progress cfg of 
+                                Left fct  -> mk_step (turn_off_refocus opts) fct
+                                Right vs  -> putStrLn "already done.." >> return (Just cfg)
+                 PrettyBigStep -> case progress cfg of 
+                                Left fct  -> mk_step (turn_on_refocus opts) fct
+                                Right vs  -> putStrLn "already done.." >> return (Just cfg)
                  Finish    -> case progress cfg of
-                                Left fct  -> fmap (setProgress done) <$> exec (loop opts) fct (prep_ctxt fct)
+                                Left fct  -> fmap (setProgress done) <$> exec (loop opts) fct (prep_ctxt fct opts)
                                 Right vs  -> putStrLn "already done.." >> return (Just cfg)
  where prep_term f0' =
         give_ [f0', 
@@ -129,8 +139,8 @@ def_interpreter opts_ref phrase cfg = do
                                     ,bind_ [Funcons.EDSL.string_ "it", given_]]]
                 ,if_else_ [is_ [given_, null_type_], given_
                           ,sequential_ [print_ [given_,Funcons.EDSL.string_ "\n"], given_]]]]
-       prep_ctxt f0 = (reader cfg) { ereader = (ereader (reader cfg)) { local_fct = f0, global_fct = f0 } }
-       mk_step opts f0 = do im <- exec step f0 (prep_ctxt f0)
+       prep_ctxt f0 opts = (reader cfg) { ereader = (ereader (reader cfg)) { local_fct = f0, global_fct = f0, run_opts = opts } }
+       mk_step opts f0 = do im <- exec step f0 (prep_ctxt f0 opts)
                             case im of Just cfg -> case progress cfg of 
                                                      Left fct -> putStrLn ("\nremaining funcon term:\n" ++ ppFuncons opts fct)
                                                      _        -> return ()
@@ -151,7 +161,6 @@ def_interpreter opts_ref phrase cfg = do
                         (Map m1, Map m2) -> Just [Map (M.union m1 m2)] 
                         _                -> Nothing
                       override _ = Nothing
-
 
 loop :: RunOptions -> Funcons -> MSOS StepRes
 loop opts = stepTrans opts 0 . toStepRes
@@ -194,7 +203,9 @@ display_help =
             \                       with nodes labelled by state identifiers\n\
             \  :revert <INT>        revert to the state with id <INT>\n\
             \  :debug <FCT>         start step-by-step execution of funcon term <FCT>\n\
-            \  :step                perform the next step in a step-by-step execution\n\
+            \  :step                perform the next step in a step-by-step execution (without changing the refocusing setting)\n\
+            \  :pretty-big-step     perform the next step in a step-by-step execution with refocusing\n\
+            \  :small-step          perform the next step in a step-by-step execution without refocusing\n\
             \  :finish              perform all remaining steps of a step-by-step execution\n\
             \  :help :h             show these commands\n\
             \  :quit :q             end the exploration\n\

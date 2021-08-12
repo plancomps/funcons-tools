@@ -57,6 +57,12 @@ bool_opt nm m = bool_opt_default False nm m
 do_refocus :: RunOptions -> Bool
 do_refocus opts = bool_opt_default True "refocus" (general_opts opts)
 
+turn_off_refocus :: RunOptions -> RunOptions
+turn_off_refocus opts = opts { general_opts = M.insert "refocus" "false" (general_opts opts) }
+
+turn_on_refocus :: RunOptions -> RunOptions
+turn_on_refocus opts = opts { general_opts = M.insert "refocus" "true" (general_opts opts) }
+
 max_restarts :: RunOptions -> Maybe Int
 max_restarts = fmap read . M.lookup "max-restarts" . general_opts
 
