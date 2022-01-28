@@ -96,7 +96,7 @@ mk_explorer args = do
       putStrLn ("unknown option: " ++ arg) 
   opts_ref <- newIORef opts 
   cfg <- mk_initial_config library entities typeenv opts
-  return $ EI.mkExplorerTree (\f c -> (\c -> (c, ())) <$> def_interpreter opts_ref f c) cfg
+  return $ EI.mkExplorer False (const . const $ False) (\f c -> (\c -> (c, ())) <$> def_interpreter opts_ref f c) cfg
  where
   library = libUnions [ Funcons.Core.Library.funcons, Funcons.EDSL.library, Funcons.Core.Manual.library ]
   entities = Funcons.Core.Library.entities 
