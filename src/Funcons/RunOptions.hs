@@ -10,7 +10,7 @@ import GLL.Combinators hiding (chooses)
 
 import qualified Data.Map as M
 import Control.Monad (when)
-import Control.Compose (OO(..))
+import GLL.Types.TypeCompose (OO(..))
 import Data.Text (pack)
 import Data.List (isSuffixOf, isPrefixOf)
 import Data.List.Split (splitOn)
