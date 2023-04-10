@@ -18,7 +18,7 @@ fresh_atom_ = FName "fresh-atom"
 stepFresh_atom = evalRules [] [step1]
     where step1 = do
             let env = emptyEnv
-            env <- getMutPatt "used-atom-set" (VPMetaVar "SA") env
+            env <- getMutPatt "used-atom-set" [VPMetaVar "SA"] env
             env <- lifted_sideCondition (SCPatternMatch (TApp "element-not-in" [TName "atoms",TVar "SA"]) [VPMetaVar "A"]) env
             putMutTerm "used-atom-set" (TApp "set-insert" [TVar "A",TVar "SA"]) env
             stepTermTo (TVar "A") env
@@ -29,7 +29,7 @@ stepUse_atom_not_in fargs =
     where step1 = do
             let env = emptyEnv
             env <- lifted_vsMatch fargs [VPAnnotated (VPMetaVar "SA") (TApp "sets" [TName "atoms"])] env
-            env <- getMutPatt "used-atom-set" (VPMetaVar "SA'") env
+            env <- getMutPatt "used-atom-set" [VPMetaVar "SA'"] env
             env <- lifted_sideCondition (SCPatternMatch (TApp "element-not-in" [TName "atoms",TVar "SA"]) [VPMetaVar "A"]) env
             putMutTerm "used-atom-set" (TApp "set-insert" [TVar "A",TVar "SA'"]) env
             stepTermTo (TVar "A") env

@@ -150,7 +150,7 @@ emulate' reader lib defaults tyenv opts mf0 = do
     --  and all the desired output will already have been printed to the screen
     ((e_exc_f, mut, wr), rem_ins) <- 
         fexec (runMSOS (setEntityDefaults defaults (stepTrans opts 0 (toStepRes f0)))
-                msos_ctxt (emptyMSOSState {inp_es = inputs})) (inputValues opts)
+                msos_ctxt ((emptyMSOSState (random_seed opts)) {inp_es = inputs})) (inputValues opts)
     -- if not in --interactive-mode then print additional information based on flags
     unless (interactive_mode opts)
         (withResults defaults msos_ctxt e_exc_f mut wr rem_ins)
@@ -193,7 +193,7 @@ withResults defaults msos_ctxt e_exc_f msos_state wr rem_ins
            display name = case M.lookup name muts of
                             Nothing -> return ()
                             Just v ->  putStrLn ("Mutable Entity: " ++ unpack name) >>
-                                       putStrLn (displayValue v) >> putStrLn ""
+                                       putStrLn (displayValues v) >> putStrLn ""
 
     printControl = forM_ (M.keys ctrl \\ toHide) display
      where ctrl = ctrl_entities wr
@@ -283,11 +283,11 @@ printTestResults fs defaults msos_ctxt msos_state wr rem_ins = do
                     _ -> return ()
         
             printMutable = forM_ (M.assocs muts) (uncurry display)
-             where display name val = case M.lookup name opts of
+             where display name vals = case M.lookup name opts of
                         Nothing -> return ()
                         Just expected -> unless 
-                                            (map (localEval name) expected == [val]) 
-                                            (reportError name (showL $ map showFuncons expected) (showValues val))
+                                            (map (localEval name) expected == vals) 
+                                            (reportError name (showL $ map showFuncons expected) (showL $ map showValues vals))
 
             -- set default values of output and control entities
             ctrl :: M.Map Name (Maybe Values)
@@ -331,10 +331,6 @@ printTestResults fs defaults msos_ctxt msos_state wr rem_ins = do
                             val -> error ("non-list given as expected output entity ("++
                                         unpack name ++ "): " ++ showL (map showValues val))
                     
-showL :: [String] -> String
-showL elems = "[" ++ intercalate "," elems ++ "]"
-
-
 -- $moduledoc
 -- This module exports functions for creating executables for funcon interpeters.
 -- The executables accepts a number of command line and configuration options that

@@ -24,9 +24,8 @@ execRewrites rew = case e_exc_rewritten of
     Left (_, _, exc)  -> Left exc
     Right r           -> Right r
   where 
-    (e_exc_rewritten, _, _) = runRewrite rew reader state
+    (e_exc_rewritten, _, _) = runRewrite rew reader emptyRewriteState 
     reader = RewriteReader (libUnions [Funcons.EDSL.library
                                       ,Funcons.Core.Manual.library])
                     emptyTypeRelation defaultRunOptions undefined undefined
-    state  = RewriteState
 

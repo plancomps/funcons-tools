@@ -47,8 +47,7 @@ setEntityDefaults :: EntityDefaults -> MSOS StepRes -> MSOS StepRes
 setEntityDefaults [] msos = msos
 setEntityDefaults ((DefMutable nm f):rest) msos = 
     liftRewrite (rewriteFuncons f) >>= \case 
-        ValTerm [v] -> putMut nm v >> setEntityDefaults rest msos
-        ValTerm vs  -> liftRewrite $ exception f "default value evaluates to a sequence"
+        ValTerm vs  -> putMut nm vs >> setEntityDefaults rest msos 
         _           -> liftRewrite $ exception f "default value requires steps to evaluate"
 setEntityDefaults ((DefInherited nm f):rest) msos = 
     liftRewrite (rewriteFuncons f) >>= \case
@@ -70,32 +69,29 @@ giveMUT :: MSOS Mutable
 giveMUT = MSOS $ \ctxt mut -> return (Right (mut_entities mut), mut, mempty)
 
 -- | Get the value of some mutable entity.
-getMut :: Name -> MSOS Values
-getMut key = do  rw <- giveMUT
-                 case M.lookup key rw of
-                    Nothing -> return null__ 
-                    Just v  -> return v
-
+getMut :: Name -> MSOS [Values] 
+getMut key = maybe [null__] id . M.lookup key <$> giveMUT
+ 
 -- | Variant of 'getMut' that performs pattern-matching.
-getMutPatt :: Name -> VPattern -> Env -> MSOS Env
-getMutPatt nm pat env = do
-    val <- getMut nm
-    liftRewrite (vMatch val pat env)
+getMutPatt :: Name -> [VPattern] -> Env -> MSOS Env
+getMutPatt nm pats env = do
+    vals <- getMut nm
+    liftRewrite (vsMatch vals pats env)
 
-modifyMUT :: Name -> (Values -> Values) -> MSOS ()
+modifyMUT :: Name -> ([Values] -> [Values]) -> MSOS ()
 modifyMUT key f = do    rw <- giveMUT
                         newMUT (M.alter up key rw)
- where  up Nothing  = Just (f null__) 
-        up (Just x) = Just (f x)
+ where  up Nothing   = Just (f [null__]) 
+        up (Just xs) = Just (f xs)
 
 -- | Set the value of some mutable entity.
-putMut :: Name -> Values -> MSOS ()
+putMut :: Name -> [Values] -> MSOS ()
 putMut key v = do rw <- giveMUT
                   newMUT (M.insert key v rw)
 
 -- | Variant of 'putMut' that applies substitution.
 putMutTerm :: Name -> FTerm -> Env -> MSOS ()
-putMutTerm nm term env = liftRewrite (subsAndRewritesToValue term env) >>= putMut nm  
+putMutTerm nm term env = liftRewrite (subsAndRewritesToValues term env) >>= putMut nm  
 
 newMUT :: Mutable -> MSOS ()
 newMUT rw = MSOS $ \ctxt mut-> return (Right(), mut {mut_entities = rw}, mempty)

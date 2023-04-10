@@ -52,12 +52,12 @@ library
                       ,split
                       ,directory
                       ,mtl >= 2.2.1
-                      ,gll >= 0.4.0.9
-                      ,TypeCompose>=0.9.10
+                      ,gll >= 0.4.1
                       ,regex-applicative
                       ,random-strings
                       ,funcons-values >= 0.1.0.9
                       ,haskeline >= 0.8.1.2
+                      ,random >= 1.2
   hs-source-dirs:      src, cbs, manual
   default-language:    Haskell2010
   other-extensions:    OverloadedStrings
@@ -150,12 +150,12 @@ executable funcons-repl
                         ,directory
                         ,mtl >= 2.2.1
                         ,gll >= 0.4.0.9
-                        ,TypeCompose>=0.9.10
                         ,regex-applicative
                         ,random-strings
                         ,funcons-values >= 0.1.0.9
                         ,exploring-interpreters >= 1.3.0.0
                         ,haskeline >= 0.8.1
+                        ,random >= 1.2
                         ,transformers >= 0.5.6
    hs-source-dirs:      src, manual, cbs
    default-language:    Haskell2010

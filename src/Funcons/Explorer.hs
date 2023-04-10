@@ -107,7 +107,7 @@ mk_initial_config lib defaults tyenv opts = do
   let msos_ctxt = MSOSReader (RewriteReader lib tyenv opts f0 f0) emptyINH emptyDCTRL (fread (string_inputs opts))
   ((e_exc_f, mut, wr), rem_ins) <- 
       fexec (runMSOS (setEntityDefaults defaults (loop opts f0))
-              msos_ctxt (emptyMSOSState {inp_es = M.empty})) (inputValues opts)
+              msos_ctxt ((emptyMSOSState (random_seed opts)) {inp_es = M.empty})) (inputValues opts)
   return $ Config { reader = init msos_ctxt, state = mut, progress = done }
   where f0 = initialise_binding_ [initialise_storing_ [map_empty_ []]]
         init msos_reader = msos_reader {inh_entities = M.insert "environment" [Map M.empty] (inh_entities msos_reader) }
@@ -191,7 +191,7 @@ display_mut_entity :: Config -> String -> IO ()
 display_mut_entity cfg ent = 
   case M.lookup (pack ent) (mut_entities (state cfg)) of 
     Nothing -> putStrLn ("unknown mutable entity: " ++ ent)
-    Just v  -> putStrLn $ showValues v
+    Just v  -> putStrLn $ showL (map showValues v)
 
 display_help :: IO ()
 display_help =

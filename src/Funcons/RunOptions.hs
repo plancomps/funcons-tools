@@ -10,7 +10,7 @@ import GLL.Combinators hiding (chooses)
 
 import qualified Data.Map as M
 import Control.Monad (when)
-import Control.Compose (OO(..))
+import GLL.Types.TypeCompose (OO(..))
 import Data.Text (pack)
 import Data.List (isSuffixOf, isPrefixOf)
 import Data.List.Split (splitOn)
@@ -29,6 +29,24 @@ data RunOptions = RunOptions {
         ,   expected_outcomes   :: TestOptions
         ,   given_inputs        :: InputValues
         }
+
+-- | Several sources of nondeterminism exists, i.e. locations where a choice between a sequence of valid alternatives are made.
+-- These options turn on pseudo-random selection of an alternative, based on a seed provide (configuration option `--seed <INT>`)
+-- If random selection is not turned on for a particular location, the first alternative in the sequence is chosen
+data SourceOfND  = 
+        NDRuleSelection   -- | Several rules of a funcon may "overlap"
+      | NDPatternMatching -- | ambiguity when multiple sequence variables occur in a pattern
+      | NDInterleaving    -- | strict parameters in a funcon signature induce congruence rules that can be considered in different orders
+      | NDValueOperations -- | value operations may produce several valid results
+      deriving (Enum, Ord, Eq)
+
+defaultSources = []
+
+instance Show SourceOfND where
+  show NDPatternMatching  = "pattern-matching"
+  show NDInterleaving     = "interleaving-of-args"
+  show NDValueOperations  = "value-operations"
+  show NDRuleSelection    = "rules"
 
 defaultRunOptions :: RunOptions
 defaultRunOptions = RunOptions Nothing M.empty M.empty M.empty M.empty
@@ -66,6 +84,9 @@ turn_on_refocus opts = opts { general_opts = M.insert "refocus" "true" (general_
 max_restarts :: RunOptions -> Maybe Int
 max_restarts = fmap read . M.lookup "max-restarts" . general_opts
 
+random_seed :: RunOptions -> Int
+random_seed = maybe 0 read . M.lookup "seed" . general_opts
+
 do_abrupt_terminate :: RunOptions -> Bool
 do_abrupt_terminate = not . bool_opt "no-abrupt-termination" . general_opts
 
@@ -81,6 +102,14 @@ show_counts :: RunOptions -> Bool
 show_counts opts = if bool_opt "display-steps" (general_opts opts)
     then not (interactive_mode opts)
     else False
+
+get_nd_sources :: RunOptions -> [SourceOfND]
+get_nd_sources = maybe defaultSources (readSources . splitOn ",") . 
+  M.lookup "non-deterministic" . general_opts
+  where readSources opts =  [ source 
+                            | o <- opts 
+                            , source <- [NDRuleSelection ..]
+                            , o == show source ]
 
 show_mutable :: RunOptions -> [Name]
 show_mutable = maybe [] (map pack . splitOn ",") . M.lookup "display-mutable-entity"  . general_opts
@@ -136,7 +165,8 @@ booleanOptions =
 booleanOptions_ = map ("--" ++) booleanOptions
 
 stringOptions = ["display-mutable-entity", "hide-output-entity"
-    , "hide-control-entity", "hide-input-entity", "max-restarts"]
+    , "hide-control-entity", "hide-input-entity", "max-restarts" 
+    , "seed", "non-deterministic"]
 stringOptions_ = map ("--" ++) stringOptions
 
 allOptions = "funcon-term" : booleanOptions ++ stringOptions
@@ -238,7 +268,7 @@ pBool :: Parser String
 pBool = "BOOL-VALUE" <:=> id_lit -- everything except `false` is considered `true`
 
 pStringValue :: Parser String
-pStringValue = "STRING-VALUE" <:=> id_lit <||> string_lit
+pStringValue = "STRING-VALUE" <:=> id_lit <||> string_lit <||> (show <$$> int_lit)
 
 pFunconName :: Parser String
 pFunconName = "FUNCON-NAME" <:=> id_lit

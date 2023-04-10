@@ -31,7 +31,7 @@ store_clear_ = FName "store-clear"
 stepStore_clear = evalRules [] [step1]
     where step1 = do
             let env = emptyEnv
-            env <- getMutPatt "store" (VPWildCard) env
+            env <- getMutPatt "store" [VPWildCard] env
             putMutTerm "store" (TApp "map" []) env
             stepTermTo (TName "null-value") env
 
@@ -62,10 +62,10 @@ stepAllocate_variable fargs =
     where step1 = do
             let env = emptyEnv
             env <- lifted_vsMatch fargs [VPAnnotated (VPMetaVar "T") (TName "types")] env
-            env <- getMutPatt "store" (VPMetaVar "Sigma") env
+            env <- getMutPatt "store" [VPMetaVar "Sigma"] env
             putMutTerm "store" (TVar "Sigma") env
             env <- premise (TApp "use-atom-not-in" [TApp "dom" [TVar "Sigma"]]) [PMetaVar "L"] env
-            env <- getMutPatt "store" (VPMetaVar "Sigma'") env
+            env <- getMutPatt "store" [VPMetaVar "Sigma'"] env
             env <- lifted_sideCondition (SCPatternMatch (TApp "map-override" [TMap [TBinding (TVar "L") (TSeq [])],TVar "Sigma'"]) [VPMetaVar "Sigma''"]) env
             putMutTerm "store" (TVar "Sigma''") env
             stepTermTo (TApp "variable" [TVar "L",TVar "T"]) env
@@ -81,14 +81,14 @@ stepRecycle_variables fargs =
           step1 = do
             let env = emptyEnv
             env <- lifted_vsMatch fargs [PADT "variable" [VPAnnotated (VPMetaVar "L") (TName "locations"),VPAnnotated (VPMetaVar "T") (TName "types")]] env
-            env <- getMutPatt "store" (VPMetaVar "Sigma") env
+            env <- getMutPatt "store" [VPMetaVar "Sigma"] env
             env <- lifted_sideCondition (SCEquality (TApp "is-in-set" [TVar "L",TApp "dom" [TVar "Sigma"]]) (TName "true")) env
             putMutTerm "store" (TApp "map-delete" [TVar "Sigma",TSet [TVar "L"]]) env
             stepTermTo (TName "null-value") env
           step2 = do
             let env = emptyEnv
             env <- lifted_vsMatch fargs [PADT "variable" [VPAnnotated (VPMetaVar "L") (TName "locations"),VPAnnotated (VPMetaVar "T") (TName "types")]] env
-            env <- getMutPatt "store" (VPMetaVar "Sigma") env
+            env <- getMutPatt "store" [VPMetaVar "Sigma"] env
             env <- lifted_sideCondition (SCEquality (TApp "is-in-set" [TVar "L",TApp "dom" [TVar "Sigma"]]) (TName "false")) env
             putMutTerm "store" (TVar "Sigma") env
             stepTermTo (TName "fail") env
@@ -100,14 +100,14 @@ stepInitialise_variable fargs =
     where step1 = do
             let env = emptyEnv
             env <- lifted_vsMatch fargs [PADT "variable" [VPAnnotated (VPMetaVar "L") (TName "locations"),VPAnnotated (VPMetaVar "T") (TName "types")],VPAnnotated (VPMetaVar "Val") (TName "values")] env
-            env <- getMutPatt "store" (VPMetaVar "Sigma") env
+            env <- getMutPatt "store" [VPMetaVar "Sigma"] env
             env <- lifted_sideCondition (SCEquality (TApp "and" [TApp "is-in-set" [TVar "L",TApp "dom" [TVar "Sigma"]],TApp "not" [TApp "is-value" [TApp "map-lookup" [TVar "Sigma",TVar "L"]]],TApp "is-in-type" [TVar "Val",TVar "T"]]) (TName "true")) env
             putMutTerm "store" (TApp "map-override" [TMap [TBinding (TVar "L") (TVar "Val")],TVar "Sigma"]) env
             stepTermTo (TName "null-value") env
           step2 = do
             let env = emptyEnv
             env <- lifted_vsMatch fargs [PADT "variable" [VPAnnotated (VPMetaVar "L") (TName "locations"),VPAnnotated (VPMetaVar "T") (TName "types")],VPAnnotated (VPMetaVar "Val") (TName "values")] env
-            env <- getMutPatt "store" (VPMetaVar "Sigma") env
+            env <- getMutPatt "store" [VPMetaVar "Sigma"] env
             env <- lifted_sideCondition (SCEquality (TApp "and" [TApp "is-in-set" [TVar "L",TApp "dom" [TVar "Sigma"]],TApp "not" [TApp "is-value" [TApp "map-lookup" [TVar "Sigma",TVar "L"]]],TApp "is-in-type" [TVar "Val",TVar "T"]]) (TName "false")) env
             putMutTerm "store" (TVar "Sigma") env
             stepTermTo (TName "fail") env
@@ -127,14 +127,14 @@ stepAssign fargs =
     where step1 = do
             let env = emptyEnv
             env <- lifted_vsMatch fargs [PADT "variable" [VPAnnotated (VPMetaVar "L") (TName "locations"),VPAnnotated (VPMetaVar "T") (TName "types")],VPAnnotated (VPMetaVar "Val") (TName "values")] env
-            env <- getMutPatt "store" (VPMetaVar "Sigma") env
+            env <- getMutPatt "store" [VPMetaVar "Sigma"] env
             env <- lifted_sideCondition (SCEquality (TApp "and" [TApp "is-in-set" [TVar "L",TApp "dom" [TVar "Sigma"]],TApp "is-in-type" [TVar "Val",TVar "T"]]) (TName "true")) env
             putMutTerm "store" (TApp "map-override" [TMap [TBinding (TVar "L") (TVar "Val")],TVar "Sigma"]) env
             stepTermTo (TName "null-value") env
           step2 = do
             let env = emptyEnv
             env <- lifted_vsMatch fargs [PADT "variable" [VPAnnotated (VPMetaVar "L") (TName "locations"),VPAnnotated (VPMetaVar "T") (TName "types")],VPAnnotated (VPMetaVar "Val") (TName "values")] env
-            env <- getMutPatt "store" (VPMetaVar "Sigma") env
+            env <- getMutPatt "store" [VPMetaVar "Sigma"] env
             env <- lifted_sideCondition (SCEquality (TApp "and" [TApp "is-in-set" [TVar "L",TApp "dom" [TVar "Sigma"]],TApp "is-in-type" [TVar "Val",TVar "T"]]) (TName "false")) env
             putMutTerm "store" (TVar "Sigma") env
             stepTermTo (TName "fail") env
@@ -145,14 +145,14 @@ stepAssigned fargs =
     where step1 = do
             let env = emptyEnv
             env <- lifted_vsMatch fargs [PADT "variable" [VPAnnotated (VPMetaVar "L") (TName "locations"),VPAnnotated (VPMetaVar "T") (TName "types")]] env
-            env <- getMutPatt "store" (VPMetaVar "Sigma") env
+            env <- getMutPatt "store" [VPMetaVar "Sigma"] env
             env <- lifted_sideCondition (SCPatternMatch (TApp "map-lookup" [TVar "Sigma",TVar "L"]) [VPAnnotated (VPMetaVar "Val") (TName "values")]) env
             putMutTerm "store" (TVar "Sigma") env
             stepTermTo (TVar "Val") env
           step2 = do
             let env = emptyEnv
             env <- lifted_vsMatch fargs [PADT "variable" [VPAnnotated (VPMetaVar "L") (TName "locations"),VPAnnotated (VPMetaVar "T") (TName "types")]] env
-            env <- getMutPatt "store" (VPMetaVar "Sigma") env
+            env <- getMutPatt "store" [VPMetaVar "Sigma"] env
             env <- lifted_sideCondition (SCEquality (TApp "map-lookup" [TVar "Sigma",TVar "L"]) (TSeq [])) env
             putMutTerm "store" (TVar "Sigma") env
             stepTermTo (TName "fail") env
@@ -175,14 +175,14 @@ stepUn_assign fargs =
     where step1 = do
             let env = emptyEnv
             env <- lifted_vsMatch fargs [PADT "variable" [VPAnnotated (VPMetaVar "L") (TName "locations"),VPAnnotated (VPMetaVar "T") (TName "types")]] env
-            env <- getMutPatt "store" (VPMetaVar "Sigma") env
+            env <- getMutPatt "store" [VPMetaVar "Sigma"] env
             env <- lifted_sideCondition (SCEquality (TApp "is-in-set" [TVar "L",TApp "dom" [TVar "Sigma"]]) (TName "true")) env
             putMutTerm "store" (TApp "map-override" [TMap [TBinding (TVar "L") (TSeq [])],TVar "Sigma"]) env
             stepTermTo (TName "null-value") env
           step2 = do
             let env = emptyEnv
             env <- lifted_vsMatch fargs [PADT "variable" [VPAnnotated (VPMetaVar "L") (TName "locations"),VPAnnotated (VPMetaVar "T") (TName "types")]] env
-            env <- getMutPatt "store" (VPMetaVar "Sigma") env
+            env <- getMutPatt "store" [VPMetaVar "Sigma"] env
             env <- lifted_sideCondition (SCEquality (TApp "is-in-set" [TVar "L",TApp "dom" [TVar "Sigma"]]) (TName "false")) env
             putMutTerm "store" (TVar "Sigma") env
             stepTermTo (TName "fail") env

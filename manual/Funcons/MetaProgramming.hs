@@ -17,6 +17,8 @@ import Data.Text (pack, unpack)
 import qualified Data.Map as M
 import qualified Data.Set as S
 
+import System.Random (mkStdGen)
+
 -- | This function implements the ==CT=> relation.
 -- Compiling programs to executable funcons terms,
 -- removing occurrences of `meta-up`, `meta-down` and `meta-let` and `meta-bound`.
@@ -90,8 +92,8 @@ compile lib tyenv fenv f =
     ((Right f, _, _), _) -> f  
   where process = do  
           env <- evalRel fenv
-          putMut atom_gen_entity (Set S.empty)
-          putMut store_entity (Map M.empty)
+          putMut atom_gen_entity [Set S.empty]
+          putMut store_entity [Map M.empty]
           withInh env_entity [env] (ctRel f)
 
 env_entity = "environment"
@@ -105,7 +107,7 @@ translationStep f vs = compstep $ do  fs <- liftRewrite (mapM dlRel vs)
 cmp_MSOSReader lib env f = MSOSReader cmp_RewriteReader M.empty M.empty (fread True)
   where cmp_RewriteReader = RewriteReader lib env defaultRunOptions f f  
 --cmp_MSOSWriter = MSOSWriter mempty mempty mempty
-cmp_MSOSState = MSOSState M.empty M.empty (RewriteState)
+cmp_MSOSState = MSOSState M.empty M.empty (emptyRewriteState {random_gen = mkStdGen 0} )
 
 library :: FunconLibrary
 library = libFromList [
