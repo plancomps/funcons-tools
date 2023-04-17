@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                funcons-tools
-version:             0.2.0.13
+version:             0.2.0.15
 synopsis:            A modular interpreter for executing funcons
 description:
     The PLanCompS project (<http://plancomps.org>) has developed a component-based approach to formal semantics.
