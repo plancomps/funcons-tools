@@ -377,6 +377,16 @@ printTestResults fs defaults msos_ctxt msos_state wr rem_ins = do
 --      * --max-restarts \<natural\>:
 --          perform a maximum of `n` transitive steps, useful for debugging.
 --
+--      * --non-deterministic <ND-SOURCES+>: make specific parts of the interpreter non-determinstic (experimental)
+--            <ND-SOURCES+> is a comma-separated list (of length at least one) containing one or more of:
+--           rules: when several rules of a funcon "overlap"
+--           pattern-matching: when multiple sequence variables occur in a pattern
+--           interleaving-of-args: strict parameters in a funcon signature induce congruence rules that can be considered in different orders
+--           value-operations: value operations may produce several valid results (e.g. `some-element`)
+--
+--     *seed <INT>: set a seed for the source of randomness, ineffective if --non-deterministic is not set
+--
+--
 -- (4) __Boolean options__ (/true/, /false/ or no argument (/true/ by default)):
 --
 --      * --refocus \<bool\>: use refocusing, only valid under certain conditions.
