@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Computations/Abnormal/Continuing/Continuing.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Computations/Abnormal/Continuing/Continuing.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Computations.Abnormal.Continuing.Continuing where

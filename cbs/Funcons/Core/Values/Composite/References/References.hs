@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Values/Composite/References/References.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Values/Composite/References/References.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Values.Composite.References.References where

@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Values/Primitive/Characters/Characters.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Values/Primitive/Characters/Characters.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Values.Primitive.Characters.Characters where

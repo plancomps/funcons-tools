@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Values/Composite/Vectors/Vectors.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Values/Composite/Vectors/Vectors.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Values.Composite.Vectors.Vectors where

@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Values/Abstraction/Generic/Generic.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Values/Abstraction/Generic/Generic.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Values.Abstraction.Generic.Generic where

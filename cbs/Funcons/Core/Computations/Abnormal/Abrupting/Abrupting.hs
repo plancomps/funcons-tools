@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Computations/Abnormal/Abrupting/Abrupting.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Computations/Abnormal/Abrupting/Abrupting.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Computations.Abnormal.Abrupting.Abrupting where

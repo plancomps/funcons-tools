@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Computations/Abnormal/Throwing/Throwing.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Computations/Abnormal/Throwing/Throwing.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Computations.Abnormal.Throwing.Throwing where

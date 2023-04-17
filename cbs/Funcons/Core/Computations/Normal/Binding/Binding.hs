@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Computations/Normal/Binding/Binding.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Computations/Normal/Binding/Binding.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Computations.Normal.Binding.Binding where

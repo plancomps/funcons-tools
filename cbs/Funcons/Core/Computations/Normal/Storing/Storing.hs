@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Computations/Normal/Storing/Storing.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Computations/Normal/Storing/Storing.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Computations.Normal.Storing.Storing where

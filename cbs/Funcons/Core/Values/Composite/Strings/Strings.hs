@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Values/Composite/Strings/Strings.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Values/Composite/Strings/Strings.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Values.Composite.Strings.Strings where

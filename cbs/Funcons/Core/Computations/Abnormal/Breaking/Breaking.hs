@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Computations/Abnormal/Breaking/Breaking.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Computations/Abnormal/Breaking/Breaking.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Computations.Abnormal.Breaking.Breaking where

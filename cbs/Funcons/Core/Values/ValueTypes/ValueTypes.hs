@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Values/Value-Types/Value-Types.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Values/Value-Types/Value-Types.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Values.ValueTypes.ValueTypes where

@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Values/Primitive/Booleans/Booleans.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Values/Primitive/Booleans/Booleans.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Values.Primitive.Booleans.Booleans where

@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Computations/Normal/Linking/Linking.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Computations/Normal/Linking/Linking.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Computations.Normal.Linking.Linking where

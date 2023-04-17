@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Values/Composite/Trees/Trees.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Values/Composite/Trees/Trees.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Values.Composite.Trees.Trees where

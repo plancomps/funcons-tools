@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Computations/Abnormal/Returning/Returning.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Computations/Abnormal/Returning/Returning.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Computations.Abnormal.Returning.Returning where

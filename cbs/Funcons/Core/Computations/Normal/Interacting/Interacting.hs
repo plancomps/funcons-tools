@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Computations/Normal/Interacting/Interacting.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Computations/Normal/Interacting/Interacting.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Computations.Normal.Interacting.Interacting where

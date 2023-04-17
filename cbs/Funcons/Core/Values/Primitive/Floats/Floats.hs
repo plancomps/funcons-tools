@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Values/Primitive/Floats/Floats.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Values/Primitive/Floats/Floats.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Values.Primitive.Floats.Floats where

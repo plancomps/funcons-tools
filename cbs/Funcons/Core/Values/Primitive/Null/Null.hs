@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Values/Primitive/Null/Null.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Values/Primitive/Null/Null.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Values.Primitive.Null.Null where

@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Values/Abstraction/Thunks/Thunks.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Values/Abstraction/Thunks/Thunks.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Values.Abstraction.Thunks.Thunks where

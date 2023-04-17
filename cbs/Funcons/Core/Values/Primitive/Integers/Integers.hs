@@ -1,4 +1,4 @@
--- GeNeRaTeD fOr: ../../CBS-beta/Funcons-beta/Values/Primitive/Integers/Integers.cbs
+-- GeNeRaTeD fOr: ../CBS-beta/Funcons-beta/Values/Primitive/Integers/Integers.cbs
 {-# LANGUAGE OverloadedStrings #-}
 
 module Funcons.Core.Values.Primitive.Integers.Integers where
