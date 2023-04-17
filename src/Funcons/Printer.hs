@@ -2,7 +2,7 @@
 
 module Funcons.Printer (
     ppFuncons, ppValues, ppTypes, ppTerms,
-    showValues, showFuncons, showTypes, showSorts, showTerms, showOp,
+    showValues, showFuncons, showTypes, showSorts, showTerms, showOp, showL,
     showValuesSeq, ppValuesSeq, showFunconsSeq, ppFunconsSeq,
     ) where
 
@@ -11,6 +11,9 @@ import Funcons.RunOptions
 
 import Data.List (intercalate)
 import Data.Text (unpack)
+
+showL :: [String] -> String
+showL elems = "[" ++ intercalate "," elems ++ "]"
 
 -- | Pretty-print a 'Values'.
 showValues :: Values -> String

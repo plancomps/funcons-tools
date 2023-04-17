@@ -331,9 +331,6 @@ printTestResults fs defaults msos_ctxt msos_state wr rem_ins = do
                             val -> error ("non-list given as expected output entity ("++
                                         unpack name ++ "): " ++ showL (map showValues val))
                     
-showL :: [String] -> String
-showL elems = "[" ++ intercalate "," elems ++ "]"
-
 
 -- $moduledoc
 -- This module exports functions for creating executables for funcon interpeters.
