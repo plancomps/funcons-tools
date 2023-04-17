@@ -1,3 +1,16 @@
+## The `runfct` executable
+
+This executable provides a funcon term interpreter for all funcons in Funcons-beta and Unstable-Funcons-beta
+
+To install:
+
+```
+cabal build
+cabal install
+```
+
+## Installing and running the REPL
+
 To install:
 
 ```
@@ -41,4 +54,23 @@ and produce the following interaction:
 #3> print(bound("it"),"\n")
 Hello world!
 #4>
+```
+
+to take advantage of the non-determinism features, use the --non-deterministic flag with all or a subset of the given sources of non-determinism
+
+```
+funcons-repl --non-deterministic value-operations,rules,pattern-matching,interleaving-of-args
+```
+
+to (possibly) see the following interaction (in this caused by the `value-operations` source):
+
+```
+#1 > some-element {1,2,3}
+{"it" |-> 1}
+#2 > some-element {1,2,3}
+{"it" |-> 2}
+#3 > some-element {1,2,3}
+{"it" |-> 1}
+#4 > some-element {1,2,3}
+{"it" |-> 3}
 ```
