@@ -2,7 +2,8 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                funcons-tools
-version:             0.2.0.12
+version:             0.2.0.15
+>>>>>>> unstable-funcons-beta
 synopsis:            A modular interpreter for executing funcons
 description:
     The PLanCompS project (<http://plancomps.org>) has developed a component-based approach to formal semantics.
@@ -53,10 +54,10 @@ library
                       ,directory
                       ,mtl >= 2.2.1
                       ,gll >= 0.4.0.9
-                      ,TypeCompose>=0.9.10
                       ,regex-applicative
-                      ,funcons-values > 0.1.0.7
+                      ,funcons-values > 0.1.0.9
                       ,random >= 1.1
+                      ,haskeline >= 0.8.1.2
   hs-source-dirs:      src, cbs, manual
   default-language:    Haskell2010
   other-extensions:    OverloadedStrings
@@ -144,17 +145,17 @@ executable funcons-repl
                         ,containers >= 0.5 && < 0.7
                         ,vector>=0.12
                         ,bv >= 0.5
-                        ,funcons-tools
                         ,multiset >= 0.3
                         ,split
                         ,directory
                         ,mtl >= 2.2.1
                         ,gll >= 0.4.0.9
-                        ,TypeCompose>=0.9.10
                         ,regex-applicative
                         ,random-strings
-                        ,funcons-values >= 0.1.0.5
-                        ,exploring-interpreters >= 0.2.0.0
+                        ,funcons-values >= 0.1.0.9
+                        ,exploring-interpreters >= 1.3.0.0
+                        ,haskeline >= 0.8.1
+                        ,transformers >= 0.5.6
    hs-source-dirs:      src, manual, cbs
    default-language:    Haskell2010
  --  ghc-options:         -rtsopts

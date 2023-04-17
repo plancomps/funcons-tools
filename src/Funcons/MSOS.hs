@@ -24,7 +24,7 @@ module Funcons.MSOS (
                         rewriteRules, stepRules, evalRules, MSOSState(..), emptyMSOSState, emptyRewriteState, MSOSReader(..),RewriteReader(..),showIException, MSOSWriter(..), RewriteWriterr(..),
     -- * Evaluation funcons TODO internal usage only (by Funcons.Tools)
         Rewritten(..), rewriteFuncons, rewriteFunconsWcount, evalFuncons
-          , stepTrans, rewritesToValue, rewritesToValues, rewritesToType
+          , stepTrans, stepAndOutput, rewritesToValue, rewritesToValues, rewritesToType
           , emptyDCTRL, emptyINH, Interactive(..), SimIO(..)
           , rewriteToValErr, count_delegation, optRefocus
           , evalStrictSequence, rewriteStrictSequence, evalSequence
@@ -909,18 +909,19 @@ stepTrans opts i res = case res of
          | otherwise -> if_abruptly_terminates (do_abrupt_terminate opts) 
                           (stepAndOutput f) return continue
        where continue res = count_restart >> stepTrans opts (i+1) res
-             stepAndOutput :: Funcons -> MSOS StepRes
-             stepAndOutput f = MSOS $ \ctxt mut -> 
-                let MSOS stepper' = evalFuncons f
-                    stepper ctxt mut = stepper' (setGlobal ctxt) mut
-                    setGlobal ctxt = ctxt 
-                            { ereader = (ereader ctxt) {global_fct = f }}
-                in do   (eres,mut',wr') <- stepper ctxt mut
-                        mapM_ (uncurry fprint) 
-                            [ (entity,val) 
-                            | (entity, vals) <- M.assocs (out_entities wr')
-                            , val <- vals ]
-                        return (eres, mut', wr')
+
+stepAndOutput :: Funcons -> MSOS StepRes
+stepAndOutput f = MSOS $ \ctxt mut -> 
+   let MSOS stepper' = evalFuncons f
+       stepper ctxt mut = stepper' (setGlobal ctxt) mut
+       setGlobal ctxt = ctxt 
+               { ereader = (ereader ctxt) {global_fct = f }}
+   in do   (eres,mut',wr') <- stepper ctxt mut
+           mapM_ (uncurry fprint) 
+               [ (entity,val) 
+               | (entity, vals) <- M.assocs (out_entities wr')
+               , val <- vals ]
+           return (eres, mut', wr')
 
 
 toStepRes :: Funcons -> StepRes
