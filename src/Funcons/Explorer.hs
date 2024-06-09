@@ -157,6 +157,7 @@ def_interpreter opts_ref phrase cfg = do
             exec opts stepper f0 msos_ctxt (nd_choices++[nd_choice])
            where ndtype = case ndsrc of NDInputInterleaving _ -> "interleaving"
                                         NDInputValueOperations _ -> "value-operation"
+                                        NDInputPattern _ -> "pattern" 
           Left ie    -> putStrLn (showIException ie) >> return Nothing 
           Right (Left fct) -> return $ Just $ cfg { state = mut, progress = Left fct} -- did not yield an environment
           Right (Right efvs) -> case filter isMap efvs of
@@ -210,6 +211,8 @@ nd_selection opts ndsrc = do
                   display (EvalResults eress) = concatMap display eress
                   display (Success fct)       = [ppFuncons opts fct]
           NDInputInterleaving fcts -> map (ppFuncons opts) fcts
+          NDInputPattern iis -> map toStr iis
+            where toStr (k, r) = "variable #" ++ show (k+1) ++ " matching " ++ show r ++ " values"
 
 display_environment :: Config -> IO ()
 display_environment cfg =

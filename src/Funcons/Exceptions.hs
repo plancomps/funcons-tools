@@ -47,7 +47,8 @@ instance Show IE where
     show (NDEncounter (NDInputValueOperations _)) = "non-determinism encountered, multiple results for value operation"
 
 data NDInput = NDInputValueOperations [EvalResult Funcons]
-             | NDInputInterleaving [Funcons] 
+             | NDInputInterleaving [Funcons]
+             | NDInputPattern [(Int, Int)] -- size of the env (nr of variables done) and nr of values matched by this variable 
 
 mkRuleErr i (_,_,ie) = show ie
 mkRulesErr strs f = "  " ++ showFuncons f ++ ":\n" ++ intercalate "\n" (map ("    " ++) strs)

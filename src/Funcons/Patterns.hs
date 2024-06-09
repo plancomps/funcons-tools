@@ -81,10 +81,11 @@ matching pats show str ps env = do
              where  acceptFirst [] = return []
                     acceptFirst xs@((r,env):rest) = do
 --                    requires backtracking between premises and pattern matching to avoid unnecessary failure
-                      ((r, env),rest) <- maybe_randomRemove NDPatternMatching xs
+                      ((r, env),rest) <- maybeNDRemove NDPatternMatching xs (NDInputPattern (map toInput xs))
                       res <- q str r env
                       case res of []  -> acceptFirst rest
                                   _   -> return res
+                    toInput (r, env) = (M.size env, r-k)
 
 ordered_subsequences :: [a] -> [[a]]
 ordered_subsequences xs = ordered_subsequences' xs []

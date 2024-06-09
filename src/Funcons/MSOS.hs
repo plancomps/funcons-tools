@@ -28,7 +28,7 @@ module Funcons.MSOS (
           , emptyDCTRL, emptyINH, Interactive(..), SimIO(..)
           , rewriteToValErr, count_delegation, optRefocus
           , evalStrictSequence, rewriteStrictSequence, evalSequence
-          , maybe_randomSelect, maybe_randomRemove,
+          , maybeNDSelect, maybeNDRemove,
     -- * Values
         showTypes, showSorts, showValues, showValuesSeq, showFuncons, showFunconsSeq,traceLib,
     -- * Funcon libraries
