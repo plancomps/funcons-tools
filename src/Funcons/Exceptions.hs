@@ -3,6 +3,7 @@ module Funcons.Exceptions where
 
 import Funcons.Types
 import Funcons.Printer
+import Funcons.Operations (EvalResult(..))
 
 import Data.List (intercalate)
 import Data.Text (unpack)
@@ -20,6 +21,7 @@ data IE = SortErr String
         | InsufficientInputConsumed Name
         | PatternMismatch String
         | StepOnValue [Values]
+        | NDEncounter NDInput
 
 showIException :: IException -> String
 showIException (f0,f,ie@(NoRule _)) = show ie
@@ -42,6 +44,9 @@ instance Show IE where
     show (NoMoreBranches errs) = mkRulesErr (zipWith mkRuleErr [1..] errs) f 
       where (_,f,_) = head errs
     show (StepOnValue v) = "attempting to step a value: " ++ showValuesSeq v
+    show (NDEncounter (NDInputValueOperations _)) = "non-determinism encountered, multiple results for value operation"
+
+data NDInput = NDInputValueOperations [EvalResult Funcons] 
 
 mkRuleErr i (_,_,ie) = show ie
 mkRulesErr strs f = "  " ++ showFuncons f ++ ":\n" ++ intercalate "\n" (map ("    " ++) strs)

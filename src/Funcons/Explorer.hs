@@ -5,7 +5,7 @@ module Funcons.Explorer where
 import qualified Language.Explorer.Monadic as EI
 
 import Funcons.EDSL hiding (isMap)
-import Funcons.Operations (isMap, Values(Map)) 
+import Funcons.Operations (isMap, Values(Map), EvalResult(..)) 
 import Funcons.MSOS
 import Funcons.RunOptions
 import Funcons.Core
@@ -15,8 +15,10 @@ import Funcons.Entities
 import Funcons.Tools
 import Funcons.Parser
 import Funcons.Printer
+import Funcons.Exceptions
 
-import Control.Monad (forM_, mapM_)
+import Control.Monad (forM_, mapM_, join)
+import Control.Monad.Trans.Class (lift) 
 import Data.IORef
 import qualified Data.Map as M
 import Data.Char (isSpace)
@@ -24,7 +26,6 @@ import Data.Tree (drawTree)
 import Data.Text (pack)
 import Text.Read (readMaybe)
 
-import Control.Monad.Trans.Class (lift) 
 import System.Console.Haskeline
 import System.Console.Haskeline.History
 import System.Environment
@@ -116,7 +117,7 @@ def_interpreter :: IORef RunOptions -> Phrase -> Config -> IO (Maybe Config)
 def_interpreter opts_ref phrase cfg = do 
   opts <- readIORef opts_ref 
   case phrase of FTerm f0' -> let f0 = prep_term f0'
-                              in fmap (setProgress done) <$> exec (loop opts) f0 (prep_ctxt f0 opts)
+                              in fmap (setProgress done) <$> exec opts (loop opts) f0 (prep_ctxt f0 opts) []
                  Debug f0' -> let f0 = prep_term f0'
                               in putStrLn ("\nremaining funcon term:\n" ++ ppFuncons opts f0) 
                               >> return (Just (cfg { progress = Left f0 }))
@@ -130,7 +131,7 @@ def_interpreter opts_ref phrase cfg = do
                                 Left fct  -> mk_step (turn_on_refocus opts) fct
                                 Right vs  -> putStrLn "already done.." >> return (Just cfg)
                  Finish    -> case progress cfg of
-                                Left fct  -> fmap (setProgress done) <$> exec (loop opts) fct (prep_ctxt fct opts)
+                                Left fct  -> fmap (setProgress done) <$> exec opts (loop opts) fct (prep_ctxt fct opts) [] 
                                 Right vs  -> putStrLn "already done.." >> return (Just cfg)
  where prep_term f0' =
         give_ [f0', 
@@ -140,16 +141,20 @@ def_interpreter opts_ref phrase cfg = do
                 ,if_else_ [is_ [given_, null_type_], given_
                           ,sequential_ [print_ [given_,Funcons.EDSL.string_ "\n"], given_]]]]
        prep_ctxt f0 opts = (reader cfg) { ereader = (ereader (reader cfg)) { local_fct = f0, global_fct = f0, run_opts = opts } }
-       mk_step opts f0 = do im <- exec step f0 (prep_ctxt f0 opts)
+       mk_step opts f0 = do im <- exec opts step f0 (prep_ctxt f0 opts) []
                             case im of Just cfg -> case progress cfg of 
                                                      Left fct -> putStrLn ("\nremaining funcon term:\n" ++ ppFuncons opts fct)
                                                      _        -> return ()
                                        Nothing -> return ()
                             return im
 
-       exec stepper f0 msos_ctxt = do 
-        (e_exc_f, mut, wr) <- runMSOS (stepper f0) msos_ctxt (state cfg)
+       exec opts stepper f0 msos_ctxt nd_choices = do 
+        (e_exc_f, mut, wr) <- runMSOS (stepper f0) msos_ctxt (setNDs nd_choices $ state cfg)
         case e_exc_f of
+          Left (_,local,NDEncounter ndsrc) -> do
+            putStrLn ("non-determinism encountered in: " ++ ppFuncons opts local)
+            nd_choice <- runInputT defaultSettings (nd_selection opts ndsrc)
+            exec opts stepper f0 msos_ctxt (nd_choices++[nd_choice])
           Left ie    -> putStrLn (showIException ie) >> return Nothing 
           Right (Left fct) -> return $ Just $ cfg { state = mut, progress = Left fct} -- did not yield an environment
           Right (Right efvs) -> case filter isMap efvs of
@@ -174,6 +179,9 @@ done = Right []
 setProgress :: StepRes -> Config -> Config
 setProgress res cfg = cfg { progress = res }
 
+setNDs :: [Int] -> MSOSState m -> MSOSState m
+setNDs is ctxt = ctxt { estate = (estate ctxt) { nd_choice = is } }
+
 -- assumes all components of RewriteReader do not change per session
 instance Eq (MSOSReader IO) where
   r1 == r2 = inh_entities r1 == inh_entities r2 
@@ -182,6 +190,23 @@ instance Eq (MSOSReader IO) where
 -- assumes input is not used // does not change per session
 instance Eq (MSOSState IO) where
   s1 == s2 = mut_entities s1 == mut_entities s2 
+
+nd_selection :: RunOptions -> NDInput -> InputT IO Int
+nd_selection opts ndsrc = do
+  lift $ putStrLn "choose from the following alternatives:"
+  lift $ forM_ (zip [1..] alts) (\(i,str) -> 
+    putStrLn (show i ++ ") " ++ str)
+    )
+  mint <- getInputLine ("by selecting a number between " ++ show 1 ++ " and " ++ show m ++ "\n>")
+  case join (fmap readMaybe mint) of
+    Just i | i >= 1 && i <= m -> return (i-1)
+    otherwise                 -> nd_selection opts ndsrc
+  where m = length alts
+        alts = case ndsrc of
+          NDInputValueOperations eress -> concatMap display eress
+            where display (Error _ _)         = []
+                  display (EvalResults eress) = concatMap display eress
+                  display (Success fct)       = [ppFuncons opts fct]
 
 display_environment :: Config -> IO ()
 display_environment cfg =

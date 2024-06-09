@@ -88,8 +88,11 @@ report f seqRes res = case res of
   Success (FValue (ADTVal "null" _)) -> rewrittens []
   Success (FValue v)          -> rewritten' v
   Success t                   -> rewriteFuncons t
-  EvalResults ress            -> maybe_randomSelect NDValueOperations ress >>= 
-                                  report f seqRes 
+  EvalResults [res]           -> report f seqRes res
+  EvalResults []              -> sortErr f "nondeterminism: empty"
+  EvalResults ress            -> nd_source_enabled NDValueOperations >>= \case
+    True  -> maybeNDSelect ress (NDEncounter (NDInputValueOperations ress)) >>= report f seqRes
+    False -> report f seqRes (head ress)
   where rewritten' v | seqRes, ValSeq fs <- v, 
                         let mvs = map project fs, all isJust mvs
                         = rewrittens (map fromJust mvs)
@@ -191,11 +194,14 @@ lookupFuncon key = Rewrite $ \ctxt st ->
 
 ---------------------------------------------------------------------------
 data RewriteReader = RewriteReader  
-                    { funconlib  :: FunconLibrary    
+                    { funconlib  :: FunconLibrary   
                     , ty_env     :: TypeRelation, run_opts :: RunOptions
                     , global_fct :: Funcons, local_fct :: Funcons }
-data RewriteState = RewriteState { random_gen :: StdGen }
-emptyRewriteState = RewriteState (mkStdGen 0)
+data RewriteState = RewriteState 
+                    { random_gen :: StdGen 
+                    , nd_choice  :: [Int] -- stack of integers representing response to ND 
+                    }
+emptyRewriteState = RewriteState (mkStdGen 0) []
 data RewriteWriterr = RewriteWriterr { counters :: Counters }
 
 -- | Monadic type for the implicit propagation of meta-information on
@@ -403,6 +409,12 @@ msos_throw = liftRewrite . rewrite_throw
 giveOpts :: Rewrite RunOptions 
 giveOpts = Rewrite $ \ctxt mut -> (Right (run_opts ctxt), mut, mempty)
 
+giveNDChoices :: Rewrite [Int]
+giveNDChoices = Rewrite $ \ctxt mut -> (Right (nd_choice mut), mut, mempty)
+
+setNDChoices :: [Int] -> Rewrite ()
+setNDChoices is = Rewrite $ \ctxt mut -> (Right (), mut {nd_choice = is}, mempty)
+
 giveINH :: MSOS Inherited
 giveINH = MSOS $ \ctxt mut -> return (Right (inh_entities ctxt), mut, mempty)
 
@@ -419,6 +431,16 @@ modifyRewriteCTXT mod (Rewrite f) = Rewrite (f . mod)
 modifyRewriteReader :: (RewriteReader -> RewriteReader) -> MSOS a -> MSOS a
 modifyRewriteReader mod (MSOS f) = MSOS (f . mod')
   where mod' ctxt = ctxt { ereader = mod (ereader ctxt) }
+
+nd_source_enabled :: SourceOfND -> Rewrite Bool
+nd_source_enabled src = do
+  opts <- giveOpts
+  return $ src `elem` get_nd_sources opts
+
+maybeNDSelect :: [a] -> IE -> Rewrite a
+maybeNDSelect alts err = giveNDChoices >>= \case
+  (i:is) | i >= 0 && i < length alts -> setNDChoices is >> return (alts !! i)
+  _                                  -> rewrite_throw err
 
 maybe_randomRemove :: SourceOfND -> [a] -> Rewrite (a, [a])
 maybe_randomRemove _ [] = randomRemove []
@@ -922,7 +944,6 @@ stepAndOutput f = MSOS $ \ctxt mut ->
                | (entity, vals) <- M.assocs (out_entities wr')
                , val <- vals ]
            return (eres, mut', wr')
-
 
 toStepRes :: Funcons -> StepRes
 toStepRes (FValue v)  = Right [v]
