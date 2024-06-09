@@ -46,7 +46,8 @@ instance Show IE where
     show (StepOnValue v) = "attempting to step a value: " ++ showValuesSeq v
     show (NDEncounter (NDInputValueOperations _)) = "non-determinism encountered, multiple results for value operation"
 
-data NDInput = NDInputValueOperations [EvalResult Funcons] 
+data NDInput = NDInputValueOperations [EvalResult Funcons]
+             | NDInputInterleaving [Funcons] 
 
 mkRuleErr i (_,_,ie) = show ie
 mkRulesErr strs f = "  " ++ showFuncons f ++ ":\n" ++ intercalate "\n" (map ("    " ++) strs)

@@ -90,9 +90,9 @@ report f seqRes res = case res of
   Success t                   -> rewriteFuncons t
   EvalResults [res]           -> report f seqRes res
   EvalResults []              -> sortErr f "nondeterminism: empty"
-  EvalResults ress            -> nd_source_enabled NDValueOperations >>= \case
-    True  -> maybeNDSelect ress (NDEncounter (NDInputValueOperations ress)) >>= report f seqRes
-    False -> report f seqRes (head ress)
+  EvalResults ress            -> 
+    maybeNDSelect NDValueOperations ress (NDInputValueOperations ress) >>= 
+    report f seqRes
   where rewritten' v | seqRes, ValSeq fs <- v, 
                         let mvs = map project fs, all isJust mvs
                         = rewrittens (map fromJust mvs)
@@ -437,10 +437,18 @@ nd_source_enabled src = do
   opts <- giveOpts
   return $ src `elem` get_nd_sources opts
 
-maybeNDSelect :: [a] -> IE -> Rewrite a
-maybeNDSelect alts err = giveNDChoices >>= \case
-  (i:is) | i >= 0 && i < length alts -> setNDChoices is >> return (alts !! i)
-  _                                  -> rewrite_throw err
+maybeNDSelect :: SourceOfND -> [a] -> NDInput -> Rewrite a
+maybeNDSelect src alts err = fst <$> maybeNDRemove src alts err 
+
+maybeNDRemove :: SourceOfND -> [a] -> NDInput -> Rewrite (a, [a])
+maybeNDRemove src [] err   = internal "non-deterministic removal: empty list"
+maybeNDRemove src [x] err  = return (x, [])
+maybeNDRemove src alts err = nd_source_enabled src >>= \case
+ False -> return (head alts, tail alts)
+ True  -> giveNDChoices >>= \case
+  (i:is) | i >= 0 && i < length alts -> 
+        setNDChoices is >> return (alts !! i, take i alts ++ drop (i+1) alts)
+  _ ->  rewrite_throw (NDEncounter err)
 
 maybe_randomRemove :: SourceOfND -> [a] -> Rewrite (a, [a])
 maybe_randomRemove _ [] = randomRemove []
@@ -887,11 +895,10 @@ evalSequence :: [Strictness] -> [Funcons] ->
 evalSequence strns args cont cons = do
     let args_map = zip [1..] (zip strns args)
 
-    let evalSeqAux args_done args_undone 
-          | null args_undone = cont (map (snd . snd) (sorter args_done))
-          | otherwise        = do
+    let evalSeqAux args_done [] = cont (map (snd . snd) (sorter args_done))
+        evalSeqAux args_done args_undone = do
               ((i,(_,f)), args_undone') <- 
-                maybe_randomRemove NDInterleaving args_undone
+                maybeNDRemove NDInterleaving args_undone (NDInputInterleaving (map (snd . snd) args_undone))
               let valueCont vs = do 
                     count_rewrite 
                     evalSeqAux args_done' (map bump args_undone')
