@@ -9,6 +9,22 @@ cabal build
 cabal install
 ```
 
+## Multiverse debugging
+Run 
+```
+git submodule init 
+git submodule update --recursive
+```
+to pull the multiverse-debugging functionality.
+
+Run cabal as follows 
+```
+cabal run funcons-repl -- --non-deterministic value-operations
+```
+to be placed inside the multiverse-debugger.
+For now, this replaces the original REPL.
+
+
 ## Installing and running the REPL
 
 To install:
