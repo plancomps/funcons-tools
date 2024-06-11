@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, OverloadedStrings, LambdaCase #-}
+{-# LANGUAGE FlexibleInstances, OverloadedStrings, LambdaCase, FlexibleContexts, RankNTypes, MultiParamTypeClasses #-}
 
 module Funcons.Explorer where
 
@@ -16,6 +16,7 @@ import Funcons.Tools
 import Funcons.Parser
 import Funcons.Printer
 import Funcons.Exceptions
+import Funcons.Types (Funcons(..))
 
 import Control.Monad (forM_, mapM_, join)
 import Control.Monad.Trans.Class (lift) 
@@ -25,11 +26,18 @@ import Data.Char (isSpace)
 import Data.Tree (drawTree)
 import Data.Text (pack)
 import Text.Read (readMaybe)
+import Data.Maybe (fromJust)
 
 import System.Console.Haskeline
 import System.Console.Haskeline.History
 import System.Environment
 import System.IO
+import System.IO.Unsafe
+
+import qualified MVD.Interface as MVD
+import qualified MVD.Debugger as MVD
+import qualified MVD.Finders as MVD
+
 
 data Phrase = FTerm Funcons
             | Debug Funcons
@@ -54,8 +62,8 @@ handle_revert r exp =
     Just e -> return e
     Nothing -> putStrLn "Invalid reference for revert" >> return exp
 
-repl :: IO ()
-repl = display_help >> getArgs >>= mk_explorer >>= (runInputT defaultSettings . repl')
+repll :: IO ()
+repll = display_help >> getArgs >>= mk_explorer >>= (runInputT defaultSettings . repl')
  where 
   repl' exp = do
    getInputLine ("#" ++ show (EI.currRef exp) ++ " > ") >>= \case 
@@ -89,7 +97,22 @@ repl = display_help >> getArgs >>= mk_explorer >>= (runInputT defaultSettings . 
                                  Left err  -> outputStrLn err >> repl' exp 
                                  Right fct -> lift (EI.execute (FTerm fct) exp) >>= (repl'  . fst)
 
-  
+
+mk_interpreter :: [String] -> IO (RunOptions, Config)
+mk_interpreter args = do 
+  (opts, unknown_opts) <- run_options args
+  forM_ unknown_opts $ \arg -> do
+      putStrLn ("unknown option: " ++ arg) 
+  opts_ref <- newIORef opts 
+  cfg <- mk_initial_config library entities typeenv opts
+  return (opts, cfg)
+  where 
+    library = libUnions [ Funcons.Core.Library.funcons, Funcons.EDSL.library, Funcons.Core.Manual.library ]
+    entities = Funcons.Core.Library.entities 
+    typeenv = Funcons.Core.Library.types
+
+
+ 
 mk_explorer :: [String] -> IO Explorer 
 mk_explorer args = do
   (opts, unknown_opts) <- run_options args
@@ -241,3 +264,99 @@ display_help =
             \  :help :h             show these commands\n\
             \  :quit :q             end the exploration\n\
             \  or just type a funcon term"
+
+
+type DebugConfig = DFunconsConfig
+
+instance MVD.Reduce () DebugConfig DebugConfig where 
+    rstate _ c = c
+
+instance MVD.Evaluate DebugConfig DebugConfig Bool where 
+    estate goal curr = goal == curr 
+
+instance Show Config where 
+  show c = show (progress c)
+
+
+
+repl :: IO ()
+repl = display_help >> getArgs >>= mk_interpreter >>= (runInputT defaultSettings . buildDebugger)
+  where buildDebugger (runopts, cfg) = do
+          getInputLine " > " >>= \case
+            Nothing -> return ()
+            (Just input) -> do
+                case fct_parse_either input of 
+                  Left err  -> outputStrLn err
+                  Right fct -> lift $ MVD.debuggerWithShow (funconsSTR (debugExecute runopts) (cfg { progress = Left fct})) MVD.equalityFinder (DFunconsConfig { nconfig = cfg, ndeter = Nothing }) ()
+
+
+data FunconsActions = FStep | NDChoice Int
+  deriving Show
+
+
+data DFunconsConfig = DFunconsConfig { nconfig :: Config, ndeter :: Maybe (Funcons, NDInput), ndchoice :: [Int]}
+
+instance Eq DFunconsConfig where 
+  d1 == d2 = nconfig d1 == nconfig d2
+
+
+instance Show DFunconsConfig where 
+  show c = case ndeter c of 
+    Nothing -> show (nconfig c) ++ "\n" ++ "No non-determinism"
+    (Just (l, _)) -> show (nconfig c) ++ "\n" ++ "Has non-determinism: " ++ show l
+
+
+debugExecute :: RunOptions -> DFunconsConfig -> IO [DFunconsConfig]
+debugExecute opts dcfg = do 
+  case progress cfg of 
+      Left fct  -> mk_step opts fct
+      Right vs  -> return [dcfg]
+  where 
+        cfg = nconfig dcfg
+        mk_step opts f0 = exec opts (loop opts) f0 (prep_ctxt f0 opts) (ndchoice dcfg)
+        
+        prep_ctxt :: Funcons -> RunOptions -> MSOSReader IO
+        prep_ctxt f0 opts = (reader cfg) { ereader = (ereader (reader cfg)) { local_fct = f0, global_fct = f0, run_opts = opts } }
+
+        exec :: t -> (t1 -> MSOS (Either Funcons [Funcons.Operations.Values Funcons])) -> t1 -> MSOSReader IO -> [Int] -> IO [DFunconsConfig]
+        exec opts stepper f0 msos_ctxt nd_choices = do 
+          (e_exc_f, mut, wr) <- runMSOS (stepper f0) msos_ctxt (setNDs nd_choices $ state cfg)
+          case e_exc_f of
+            Left (_,local,NDEncounter ndsrc) -> return [dcfg {ndeter = Just (local, ndsrc)} ]
+                -- exec opts stepper f0 msos_ctxt (nd_choices)
+                  where ndtype = case ndsrc of 
+                                      NDInputInterleaving _ -> "interleaving"
+                                      NDInputValueOperations _ -> "value-operation"
+                                      NDInputPattern _ -> "pattern" 
+            Left ie    -> return [] 
+            Right (Left fct) -> return $ [dcfg { nconfig = cfg { state = mut, progress = Left fct}}] -- did not yield an environment
+            Right (Right efvs) -> case filter isMap efvs of
+              []    -> return $ [dcfg { nconfig = cfg { state = mut, progress = Right efvs } }]
+              [env] -> return $ [dcfg { nconfig = cfg { reader = accumulate (reader cfg) env, state = mut, progress = Right efvs } } ]
+              _     -> return [] 
+          where accumulate msos_reader env = msos_reader { inh_entities = M.update override "environment" (inh_entities msos_reader) }
+                  where override [old_env] = case (env, old_env) of 
+                          (Map m1, Map m2) -> Just [Map (M.union m1 m2)] 
+                          _                -> Nothing
+                        override _ = Nothing
+
+
+debugActions :: DFunconsConfig -> [FunconsActions]
+debugActions c = case ndeter c of 
+  Nothing -> [FStep]
+  (Just (local, NDInputInterleaving l)) -> [NDChoice (i + 1) | i <- [0..length l - 1]]
+  (Just (local, NDInputPattern l)) ->  [NDChoice (i + 1) | i <- [0..length l - 1]]
+  (Just (local, NDInputValueOperations l)) -> [NDChoice (i + 1) | i <- [0..length l - 1]]
+
+
+debugExecute' interp c p = 
+  case p of 
+    FStep -> unsafePerformIO $ interp c
+    (NDChoice i) -> unsafePerformIO $ interp (c { ndchoice = ndchoice c ++ [i] })
+
+funconsSTR :: (DFunconsConfig -> IO [DFunconsConfig]) -> Config -> MVD.STR DFunconsConfig FunconsActions
+funconsSTR interp c = MVD.STR 
+  { MVD.initial = [DFunconsConfig { nconfig = c, ndeter = Nothing, ndchoice = [] }]
+  , MVD.actions = debugActions
+  , MVD.execute = debugExecute' interp
+  }
