@@ -1,0 +1,3 @@
+[submodule "multiverse-debugging"]
+	path = multiverse-debugging
+	url = git@gitlab.com:leegbestand/multiverse-debugging.git
