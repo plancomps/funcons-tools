@@ -280,30 +280,34 @@ instance Show Config where
 
 
 repl :: IO ()
-repl = display_help >> getArgs >>= mk_interpreter >>= (runInputT defaultSettings . buildDebugger)
+repl = getArgs >>= mk_interpreter >>= (runInputT defaultSettings . buildDebugger)
   where buildDebugger (runopts, cfg) = do
           getInputLine " > " >>= \case
             Nothing -> return ()
             (Just input) -> do
                 case fct_parse_either input of 
                   Left err  -> outputStrLn err
-                  Right fct -> lift $ MVD.debuggerWithShow (funconsSTR (debugExecute runopts) (cfg { progress = Left fct})) MVD.equalityFinder (DFunconsConfig { nconfig = cfg, ndeter = Nothing }) ()
+                  Right fct -> lift $ MVD.debuggerWithShow (funconsSTR runopts (debugExecute runopts) (cfg { progress = Left fct})) MVD.equalityFinder (DFunconsConfig { nconfig = cfg, ndeter = Nothing }) ()
 
 
 data FunconsActions = FStep | NDChoice Int
   deriving Show
 
 
-data DFunconsConfig = DFunconsConfig { nconfig :: Config, ndeter :: Maybe (Funcons, NDInput), ndchoice :: [Int]}
+data DFunconsConfig = DFunconsConfig { nconfig :: Config, ndeter :: Maybe (Funcons, NDInput), ndchoice :: [Int], opts :: RunOptions }
 
 instance Eq DFunconsConfig where 
   d1 == d2 = nconfig d1 == nconfig d2
 
+-- Funcons [Values]
+showProgress :: RunOptions -> StepRes -> String
+showProgress opts (Left f) = ppFuncons opts f
+showProgress _ (Right vs) = show vs
 
 instance Show DFunconsConfig where 
   show c = case ndeter c of 
-    Nothing -> show (nconfig c) ++ "\n" ++ "No non-determinism"
-    (Just (l, _)) -> show (nconfig c) ++ "\n" ++ "Has non-determinism: " ++ show l
+    Nothing -> (showProgress (opts c) . progress $ nconfig c) ++ "\n" ++ "No non-determinism"
+    (Just (l, _)) -> show (nconfig c) ++ "\n" ++ "Has non-determinism: " ++ ppFuncons (opts c) l
 
 
 debugExecute :: RunOptions -> DFunconsConfig -> IO [DFunconsConfig]
@@ -323,11 +327,6 @@ debugExecute opts dcfg = do
           (e_exc_f, mut, wr) <- runMSOS (stepper f0) msos_ctxt (setNDs nd_choices $ state cfg)
           case e_exc_f of
             Left (_,local,NDEncounter ndsrc) -> return [dcfg {ndeter = Just (local, ndsrc)} ]
-                -- exec opts stepper f0 msos_ctxt (nd_choices)
-                  where ndtype = case ndsrc of 
-                                      NDInputInterleaving _ -> "interleaving"
-                                      NDInputValueOperations _ -> "value-operation"
-                                      NDInputPattern _ -> "pattern" 
             Left ie    -> return [] 
             Right (Left fct) -> return $ [dcfg { nconfig = cfg { state = mut, progress = Left fct}}] -- did not yield an environment
             Right (Right efvs) -> case filter isMap efvs of
@@ -344,9 +343,9 @@ debugExecute opts dcfg = do
 debugActions :: DFunconsConfig -> [FunconsActions]
 debugActions c = case ndeter c of 
   Nothing -> [FStep]
-  (Just (local, NDInputInterleaving l)) -> [NDChoice (i + 1) | i <- [0..length l - 1]]
-  (Just (local, NDInputPattern l)) ->  [NDChoice (i + 1) | i <- [0..length l - 1]]
-  (Just (local, NDInputValueOperations l)) -> [NDChoice (i + 1) | i <- [0..length l - 1]]
+  (Just (local, NDInputInterleaving l)) -> [NDChoice i | i <- [0..length l - 1]]
+  (Just (local, NDInputPattern l)) ->  [NDChoice i | i <- [0..length l - 1]]
+  (Just (local, NDInputValueOperations l)) -> [NDChoice i | i <- [0..length l - 1]]
 
 
 debugExecute' interp c p = 
@@ -354,9 +353,9 @@ debugExecute' interp c p =
     FStep -> unsafePerformIO $ interp c
     (NDChoice i) -> unsafePerformIO $ interp (c { ndchoice = ndchoice c ++ [i] })
 
-funconsSTR :: (DFunconsConfig -> IO [DFunconsConfig]) -> Config -> MVD.STR DFunconsConfig FunconsActions
-funconsSTR interp c = MVD.STR 
-  { MVD.initial = [DFunconsConfig { nconfig = c, ndeter = Nothing, ndchoice = [] }]
+funconsSTR :: RunOptions -> (DFunconsConfig -> IO [DFunconsConfig]) -> Config -> MVD.STR DFunconsConfig FunconsActions
+funconsSTR ropts interp c = MVD.STR 
+  { MVD.initial = [DFunconsConfig { nconfig = c, ndeter = Nothing, ndchoice = [], opts = ropts }]
   , MVD.actions = debugActions
   , MVD.execute = debugExecute' interp
   }
