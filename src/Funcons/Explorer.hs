@@ -26,7 +26,7 @@ import Data.Char (isSpace)
 import Data.Tree (drawTree)
 import Data.Text (pack)
 import Text.Read (readMaybe)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, isJust)
 
 import System.Console.Haskeline
 import System.Console.Haskeline.History
@@ -287,14 +287,36 @@ repl = getArgs >>= mk_interpreter >>= (runInputT defaultSettings . buildDebugger
             (Just input) -> do
                 case fct_parse_either input of 
                   Left err  -> outputStrLn err
-                  Right fct -> lift $ MVD.debuggerWithShow (funconsSTR runopts (debugExecute runopts) (cfg { progress = Left fct})) MVD.equalityFinder (DFunconsConfig { nconfig = cfg, ndeter = Nothing }) ()
+                  Right fct -> lift $ MVD.debugger (printDFunconsConfig runopts) (putStrLn . showFunconsActions runopts) (funconsSTR runopts (debugExecute runopts) (cfg { progress = Left fct})) MVD.equalityFinder (DFunconsConfig { nconfig = cfg, ndeter = Nothing }) ()
 
 
-data FunconsActions = FStep | NDChoice Int
-  deriving Show
+data FunconsActions = FStep | NDChoice Int NDInput
 
+
+showFunconsActions :: RunOptions -> FunconsActions -> String
+showFunconsActions _ FStep = "Step"
+showFunconsActions opts (NDChoice i (NDInputInterleaving [f])) = 
+  "Choose: " ++ ppFuncons opts f
+showFunconsActions opts (NDChoice i (NDInputValueOperations [s])) = 
+  "Pick value: " ++ display s
+  where display (Error _ _)         = ""
+        display (EvalResults eress) = concatMap display eress
+        display (Success fct)       = join [ppFuncons opts fct]
+showFunconsActions opts (NDChoice i (NDInputPattern k)) = 
+  concatMap toStr k
+  where toStr (k, r) = "variable #" ++ show (k+1) ++ " matching " ++ show r ++ " values"
 
 data DFunconsConfig = DFunconsConfig { nconfig :: Config, ndeter :: Maybe (Funcons, NDInput), ndchoice :: [Int], opts :: RunOptions }
+
+printDFunconsConfig :: RunOptions -> DFunconsConfig -> IO ()
+printDFunconsConfig opts c 
+  | isJust (ndeter c) = do
+    putStr "Current term: "
+    putStrLn $ showProgress opts (progress $ nconfig c)
+    putStrLn $ "Non-determinism choice at: " ++ ppFuncons opts (fst . fromJust . ndeter $ c)
+  | otherwise =  do
+    putStr "Current term: "
+    putStrLn $ showProgress opts (progress $ nconfig c)
 
 instance Eq DFunconsConfig where 
   d1 == d2 = nconfig d1 == nconfig d2
@@ -306,8 +328,8 @@ showProgress _ (Right vs) = show vs
 
 instance Show DFunconsConfig where 
   show c = case ndeter c of 
-    Nothing -> (showProgress (opts c) . progress $ nconfig c) ++ "\n" ++ "No non-determinism"
-    (Just (l, _)) -> show (nconfig c) ++ "\n" ++ "Has non-determinism: " ++ ppFuncons (opts c) l
+    Nothing -> (showProgress (opts c) . progress $ nconfig c) ++ "\n" 
+    (Just (l, _)) -> show (nconfig c) ++ "\n" ++ "Has non-determinism: " ++ ppFuncons (opts c) l ++ "\n"
 
 
 debugExecute :: RunOptions -> DFunconsConfig -> IO [DFunconsConfig]
@@ -343,15 +365,15 @@ debugExecute opts dcfg = do
 debugActions :: DFunconsConfig -> [FunconsActions]
 debugActions c = case ndeter c of 
   Nothing -> [FStep]
-  (Just (local, NDInputInterleaving l)) -> [NDChoice i | i <- [0..length l - 1]]
-  (Just (local, NDInputPattern l)) ->  [NDChoice i | i <- [0..length l - 1]]
-  (Just (local, NDInputValueOperations l)) -> [NDChoice i | i <- [0..length l - 1]]
+  (Just (local, NDInputInterleaving l)) -> [NDChoice i (NDInputInterleaving [(l !! i)]) | i <- [0..length l - 1]]
+  (Just (local, NDInputPattern l)) ->  [NDChoice i (NDInputPattern [(l !! i)]) | i <- [0..length l - 1]]
+  (Just (local, NDInputValueOperations l)) -> [NDChoice i (NDInputValueOperations [(l !! i)]) | i <- [0..length l - 1]]
 
 
 debugExecute' interp c p = 
   case p of 
     FStep -> unsafePerformIO $ interp c
-    (NDChoice i) -> unsafePerformIO $ interp (c { ndchoice = ndchoice c ++ [i] })
+    (NDChoice i _) -> unsafePerformIO $ interp (c { ndchoice = ndchoice c ++ [i] })
 
 funconsSTR :: RunOptions -> (DFunconsConfig -> IO [DFunconsConfig]) -> Config -> MVD.STR DFunconsConfig FunconsActions
 funconsSTR ropts interp c = MVD.STR 

@@ -42,7 +42,7 @@ stepHandle_abrupt fargs =
           step1 = do
             let env = emptyEnv
             env <- lifted_fsMatch fargs [PMetaVar "X",PMetaVar "Y"] env
-            env <- getControlPatt "abrupted" (Nothing) env
+            env <- getControlPatt "abruptedd" (Nothing) env
             (env,[__varabrupted]) <- receiveSignals ["abrupted"] (withControlTerm "abrupted" (Nothing) env (premise (TVar "X") [PMetaVar "X'"] env))
             env <- receiveSignalPatt __varabrupted (Nothing) env
             stepTermTo (TApp "handle-abrupt" [TVar "X'",TVar "Y"]) env
