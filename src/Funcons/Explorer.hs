@@ -324,6 +324,7 @@ instance Eq DFunconsConfig where
 -- Funcons [Values]
 showProgress :: RunOptions -> StepRes -> String
 showProgress opts (Left f) = ppFuncons opts f
+showProgress _ (Right [vs]) = show vs
 showProgress _ (Right vs) = show vs
 
 instance Show DFunconsConfig where 
@@ -373,7 +374,7 @@ debugActions c = case ndeter c of
 debugExecute' interp c p = 
   case p of 
     FStep -> unsafePerformIO $ interp c
-    (NDChoice i _) -> unsafePerformIO $ interp (c { ndchoice = ndchoice c ++ [i] })
+    (NDChoice i _) -> unsafePerformIO $ interp (c { ndchoice = ndchoice c ++ [i], ndeter = Nothing })
 
 funconsSTR :: RunOptions -> (DFunconsConfig -> IO [DFunconsConfig]) -> Config -> MVD.STR DFunconsConfig FunconsActions
 funconsSTR ropts interp c = MVD.STR 
