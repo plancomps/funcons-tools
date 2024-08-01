@@ -350,7 +350,7 @@ debugExecute opts dcfg = do
         exec opts stepper f0 msos_ctxt nd_choices = do 
           (e_exc_f, mut, wr) <- runMSOS (stepper f0) msos_ctxt (setNDs nd_choices $ state cfg)
           case e_exc_f of
-            Left (curr, local, NDEncounter ndsrc) -> return [dcfg {ndeter = Just (local, ndsrc), nconfig = (nconfig dcfg) { progress = Left curr}} ]
+            Left (curr, local, NDEncounter ndsrc) -> return [dcfg {ndeter = Just (local, ndsrc), nconfig = nconfig dcfg } ]
             Left ie    -> putStrLn (showIException ie) >> return []
             Right (Left fct) -> return $ [dcfg { nconfig = cfg { state = mut, progress = Left fct}}] -- did not yield an environment
             Right (Right efvs) -> case filter isMap efvs of
