@@ -46,15 +46,11 @@ import Funcons.Exceptions
 import Funcons.Simulation
 import qualified Funcons.Operations as VAL
 
-import Control.Applicative
-import Control.Arrow ((***))
-import Control.Monad.Writer hiding ((<>))
-import Control.Monad.Fail
+import Control.Monad (liftM, ap)
 import Data.Function (on)
 import Data.Maybe (isJust, isNothing, fromJust)
 import Data.List (foldl', intercalate, partition, sortBy)
 import Data.Text (unpack)
-import Data.Semigroup
 
 import qualified Data.Map as M
 
@@ -207,15 +203,13 @@ newtype Rewrite a= Rewrite {runRewrite :: (RewriteReader -> RewriteState ->
                     (Either IException a, RewriteState, RewriteWriterr))}
 
 instance Applicative Rewrite where
-  pure = return
+  pure a = Rewrite (\_ st -> (Right a, st, mempty))
   (<*>) = ap
 
 instance Functor Rewrite where
   fmap = liftM
 
 instance Monad Rewrite  where
-  return a = Rewrite (\_ st -> (Right a, st, mempty))
-
   (Rewrite f) >>= k = Rewrite (\ctxt st ->
                     let res1@(e_a1,st1,cs1) = f ctxt st
                      in case e_a1 of 
@@ -225,11 +219,10 @@ instance Monad Rewrite  where
                                         in (a2,st2,cs1 <> cs2))
 
 instance Semigroup RewriteWriterr where
-  (<>) = mappend
+  (RewriteWriterr cs1) <> (RewriteWriterr cs2) = RewriteWriterr (cs1 <> cs2)
 
 instance Monoid RewriteWriterr where
     mempty = RewriteWriterr mempty
-    (RewriteWriterr cs1) `mappend` (RewriteWriterr cs2) = RewriteWriterr (cs1 `mappend` cs2)
 
 liftRewrite :: Rewrite a -> MSOS a
 liftRewrite ev = MSOS $ \ctxt mut -> 
@@ -315,15 +308,13 @@ newtype MSOS a = MSOS { runMSOS ::
                         -> m (Either IException a, MSOSState m, MSOSWriter)) }
 
 instance Applicative MSOS where
-  pure = return
+  pure a = MSOS (\_ mut -> return (Right a,mut,mempty))
   (<*>) = ap
 
 instance Functor MSOS where
   fmap = liftM
 
 instance Monad MSOS  where
-  return a = MSOS (\_ mut -> return (Right a,mut,mempty))
-
   (MSOS f) >>= k = MSOS (\ctxt mut -> do
                     res1@(e_a1,mut1,wr1) <- f ctxt mut 
                     case e_a1 of 
@@ -337,12 +328,11 @@ instance MonadFail MSOS where
   fail = liftRewrite . internal 
 
 instance Semigroup MSOSWriter where
-  (<>) = mappend
+  (MSOSWriter x1 x2 x3) <> (MSOSWriter y1 y2 y3) = 
+      MSOSWriter (x1 `unionCTRL` y1) (x2 `unionOUT` y2) (x3 `mappend` y3) 
 
 instance Monoid MSOSWriter where
     mempty = MSOSWriter mempty mempty mempty
-    (MSOSWriter x1 x2 x3) `mappend` (MSOSWriter y1 y2 y3) = 
-        MSOSWriter (x1 `unionCTRL` y1) (x2 `unionOUT` y2) (x3 `mappend` y3) 
 
 -- | A map storing the values of /mutable/ entities.
 type Mutable      = M.Map Name [Values]
@@ -507,12 +497,11 @@ type Input m = M.Map Name ([[Values]], Maybe (m Funcons))
 data Counters = Counters !Int !Int !Int !Int !Int !Int !Int !Int 
 
 instance Semigroup Counters where
-  (<>) = mappend
+  (Counters x1 x2 x3 x4 x5 x6 x7 x8) <> (Counters y1 y2 y3 y4 y5 y6 y7 y8) = 
+      Counters (x1+y1) (x2+y2) (x3+y3) (x4+y4) (x5+y5) (x6+y6) (x7+y7) (x8+y8)
 
 instance Monoid Counters where
     mempty = Counters 0 0 0 0 0 0 0 0
-    (Counters x1 x2 x3 x4 x5 x6 x7 x8) `mappend` (Counters y1 y2 y3 y4 y5 y6 y7 y8) = 
-        Counters (x1+y1) (x2+y2) (x3+y3) (x4+y4) (x5+y5) (x6+y6) (x7+y7) (x8+y8)
 
 emptyCounters x1 x2 x3 x4 x5 x6 x7 x8 = 
     mempty { ewriter = mempty {counters = Counters x1 x2 x3 x4 x5 x6 x7 x8}}
@@ -549,6 +538,7 @@ count_backtrack_in = Rewrite $ \_ st -> (Right (), st, mempty { counters = Count
 ppCounters cs =
  "number of (" ++ counterKeys ++ "): (" ++ displayCounters cs ++ ")"
 
+counterKeys :: String
 counterKeys = "restarts,rewrites,(attempts),steps,refocus,premises,backtracking(outer),backtracking(inner)"
 displayCounters (Counters steps rewrites rattempts restarts refocus delegations bout bin) = 
   intercalate "," $ 
@@ -863,7 +853,8 @@ evalStrictSequence args cont cons =
 evalSequence :: [Strictness] -> [Funcons] -> 
     ([Funcons] -> Rewrite Rewritten) -> ([Funcons] -> Funcons) -> Rewrite Rewritten
 evalSequence strns args cont cons = do
-    let args_map = zip [1..] (zip strns args)
+    let args_map :: [(Int, (Strictness, Funcons))]
+        args_map = zip [1..] (zip strns args)
 
     let evalSeqAux args_done args_undone 
           | null args_undone = cont (map (snd . snd) (sorter args_done))
@@ -891,6 +882,7 @@ evalSequence strns args cont cons = do
  where  isDone (NonStrict, _)     = True
         isDone (Strict, FValue _) = True
         isDone (Strict,_)         = False
+        sorter :: [(Int, b)] -> [(Int, b)]
         sorter = sortBy (compare `on` fst)
 
 -- | Yield an 'MSOS' computation as a fully rewritten term.

@@ -3,7 +3,7 @@
 module Funcons.Core.Values.Composite.DatatypesBuiltin where
 
 import Funcons.EDSL
-import Funcons.MSOS (evalStrictSequence, evalSequence, Strictness(..))
+import Funcons.MSOS (evalStrictSequence, evalSequence)
 import Funcons.Operations (Values(..), Types(..), ComputationTypes(..))
 import Data.Text (pack,unpack)
 

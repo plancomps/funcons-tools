@@ -9,14 +9,11 @@ import Funcons.MSOS
 import Funcons.Types
 import Funcons.Substitution
 import Funcons.Exceptions
-import Funcons.Operations (isGround)
 import Funcons.RunOptions (SourceOfND(..))
 
-import Control.Applicative
-import Control.Monad (foldM, forM)
+import Control.Monad (forM)
 import Data.Function (on)
 import Data.List (sortBy, intercalate)
-import Data.Monoid
 import Data.Text (unpack)
 import Data.Foldable (toList)
 import qualified Data.Map as M 
@@ -58,7 +55,8 @@ seqMatcher p level (var, op, mty) str k env = case op of
               -- sorts the result in order of preference
               sortWithPref :: [(Int, Env)] -> [(Int, Env)] 
               sortWithPref = sortBy (comparison `on` fst)
-                where comparison = case mty of
+                where comparison :: Ord a => a -> a -> Ordering
+                      comparison = case mty of
                         Nothing   -> compare      -- no annotation => shortest match
                         Just  _   -> flip compare -- annoration => longest match
 

@@ -3,12 +3,10 @@
 module Funcons.Simulation where
 
 import Funcons.Types
-import Funcons.Exceptions
 import Funcons.Printer
 import Funcons.Parser (fvalue_parse_either)
 import Funcons.RunOptions
 
-import Control.Applicative
 import Control.Monad.State
 import System.Console.Haskeline
 import qualified Data.Map as M

@@ -11,7 +11,7 @@ import GLL.Combinators hiding (chooses)
 import qualified Data.Map as M
 import Control.Monad (when)
 import GLL.Types.TypeCompose (OO(..))
-import Data.Text (pack)
+import Data.Text (pack, Text)
 import Data.List (isSuffixOf, isPrefixOf)
 import Data.List.Split (splitOn)
 
@@ -158,16 +158,20 @@ csv_output_with_keys opts = bool_opt "csv-keys" (general_opts opts)
 inputValues :: RunOptions -> InputValues
 inputValues = given_inputs
 
+booleanOptions :: [String]
 booleanOptions = 
   ["refocus", "full-environments", "hide-result", "display-steps"
   ,"no-abrupt-termination", "interactive-mode", "string-inputs"
   ,"format-string-outputs", "hide-tests", "show-output-only"
   ,"auto-config", "csv", "csv-keys"]
+booleanOptions_ :: [String]
 booleanOptions_ = map ("--" ++) booleanOptions
 
+stringOptions :: [String]
 stringOptions = ["display-mutable-entity", "hide-output-entity"
     , "hide-control-entity", "hide-input-entity", "max-restarts"
     , "seed", "non-deterministic"]
+stringOptions_ :: [String]
 stringOptions_ = map ("--" ++) stringOptions
 
 allOptions = "funcon-term" : booleanOptions ++ stringOptions
@@ -233,7 +237,9 @@ cfg_lexerSettings = fct_lexerSettings {
   ,   keychars = (keychars fct_lexerSettings) ++ cfg_keychars
   }
 
+cfg_keychars :: [Char]
 cfg_keychars = ":;="
+cfg_keywords :: [String]
 cfg_keywords = allOptions ++ ["result-term", "general", "tests", "funcons", "inputs"]
 
 pRunOptions :: Parser RunOptions
@@ -277,7 +283,8 @@ pFunconName = "FUNCON-NAME" <:=> id_lit
 pTestOutcomes :: Parser RunOptions
 pTestOutcomes = "TEST-OUTCOMES"
   <:=> toOptions <$$> (M.union <$$> pResult <**> pEntityValues)
-    where pResult = mStoreResult <$$>
+    where pResult :: AltExpr Token (M.Map Text [Funcons])
+          pResult = mStoreResult <$$>
                       optional (id <$$ keyword "result-term" <** keychar ':'
                                              <**> pFunconsSeq <** keychar ';')
             where mStoreResult Nothing = M.empty

@@ -5,8 +5,6 @@ module Funcons.Core.Values.Primitive.IntegersBuiltin where
 import Funcons.EDSL hiding (integers_)
 import qualified Funcons.Operations as VAL
 
-import Funcons.Core.Values.Primitive.BoolBuiltin
-
 library = libFromList [
     ("integer-add", fromValOp integer_add_ VAL.integer_add_)
   , ("int-add", fromValOp integer_add_ VAL.integer_add_)

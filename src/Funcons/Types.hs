@@ -7,14 +7,11 @@ module Funcons.Types (
 import qualified Funcons.Operations as VAL hiding (SortErr, ValueOp)
 import Funcons.Operations hiding (Name, Values, ComputationTypes, Types, isMap, isNull, isSet, map_empty_, isEnv, isDefinedVal, isChar, isVec, isType, isList, isNat, isInt, atoms_, integers_, values_, set_, list_, tuple_, atom_, nulltype_, non_null_values_, types_, value_types_, toList, isList, libFromList, listUnites, null)
 
-import qualified Data.Char as C
 import qualified Data.Map as M
 import qualified Data.Set as S
-import qualified Data.MultiSet as MS
 import qualified Data.Vector as V
 import Data.Maybe (isJust)
 import Data.Text (Text)
-import Data.Ratio
 
 type MetaVar = String
 type Name = Text

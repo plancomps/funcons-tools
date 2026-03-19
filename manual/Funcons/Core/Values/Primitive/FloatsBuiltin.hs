@@ -3,8 +3,7 @@
 module Funcons.Core.Values.Primitive.FloatsBuiltin where
 
 import Funcons.EDSL
-import Funcons.Operations (Values(..), ComputationTypes(..), Types(..), isIEEEFormat, doubleFromIEEEFormat, tobool)
-import Funcons.Core.Values.Primitive.BoolBuiltin
+import Funcons.Operations (Values(..), isIEEEFormat, doubleFromIEEEFormat, tobool)
 import Funcons.Core.Values.Primitive.IntegersBuiltin
 
 import Data.Fixed (mod')

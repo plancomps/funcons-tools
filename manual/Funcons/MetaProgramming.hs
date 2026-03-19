@@ -8,12 +8,11 @@ module Funcons.MetaProgramming where
 import Funcons.MSOS
 import Funcons.EDSL
 import Funcons.Types
-import Funcons.Patterns
 import Funcons.RunOptions
 import Funcons.Simulation
 
 import Data.Maybe (fromJust)
-import Data.Text (pack, unpack)
+import Data.Text (pack, unpack, Text)
 import qualified Data.Map as M
 import qualified Data.Set as S
 
@@ -94,6 +93,7 @@ compile lib tyenv fenv f =
           putMut store_entity [Map M.empty]
           withInh env_entity [env] (ctRel f)
 
+env_entity, store_entity, atom_gen_entity :: Text 
 env_entity = "environment"
 store_entity = "store"
 atom_gen_entity = "used-atom-set"

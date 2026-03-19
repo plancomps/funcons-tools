@@ -25,10 +25,8 @@ import Funcons.Substitution
 import Funcons.Exceptions
 import Funcons.Patterns
 
-import Control.Applicative
 import Control.Arrow
 import qualified Data.Map as M
-import Data.Text
 
 -- defaults
 -- | A list of 'EntityDefault's is used to declare (and possibly initialise)

@@ -5,8 +5,6 @@ module Funcons.Core.Values.Composite.SetsBuiltin where
 import Funcons.EDSL hiding (set_)
 import qualified Funcons.Operations as VAL 
 
-import qualified Data.Set as S
-
 library = libFromList [
     ("set", fromValOp set_ VAL.set_)
   , ("set-empty", fromNullaryValOp set_empty_ VAL.set_empty_)

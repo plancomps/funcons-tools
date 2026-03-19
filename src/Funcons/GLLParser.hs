@@ -63,11 +63,15 @@ fct_lexerSettings = emptyLanguage {
   , keychars    = fct_keychars
   }
 
+lexer :: SubsumesToken t => String -> [t]
 lexer = GLL.Combinators.lexer fct_lexerSettings
+lexerEither :: SubsumesToken t => String -> Either String [t]
 lexerEither = GLL.Combinators.lexerEither fct_lexerSettings
 
+fct_keywords :: [String]
 fct_keywords = ["void", "depends", "forall", "type_abs"
                ,"typevar", "?", "*", "+", "|->", "=>"]
+fct_keychars :: [Char]
 fct_keychars = "{}(),'\"[]|^&~"
 
 lName = (:) <$> psym isLower <*> many (psym (\c -> isAlphaNum c || c == '-'))
@@ -114,7 +118,8 @@ pFunconss :: Parser (Either Funcons [Funcons])
 pFunconss = "FUNCONS-SEQUENCE" 
   <::=  Left  <$$> pFuncons
   <||>  Right . merge <$$> parens (multipleSepBy pFunconss (keychar ','))
-  where merge = foldr op [] 
+  where merge :: [Either Funcons [Funcons]] -> [Funcons]
+        merge = foldr op [] 
           where op (Left f) acc = f:acc
                 op (Right fs) acc = fs++acc
 
@@ -139,7 +144,8 @@ pValues = "VALUES"
   <||> string__  <$$> string_lit
   <||> mk_integers . toInteger <$$> int_lit 
   <||> IEEE_Float_64 . fst . head . readFloat <$$> pRatioAsString
- where  pRatioAsString = "RATIOasSTRING" -- NOT OK, would parse "-2.-3"
+ where  pRatioAsString :: Parser String
+        pRatioAsString = "RATIOasSTRING" -- NOT OK, would parse "-2.-3"
           <:=> (\m l -> show m ++ "." ++ show l) <$$> int_lit <** keychar '.'
                                                  <**> int_lit
 

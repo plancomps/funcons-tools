@@ -11,9 +11,7 @@ module Funcons.Substitution (
 import Funcons.Types
 import Funcons.MSOS
 
-import Control.Applicative
 import Control.Monad
-import Data.Monoid
 import qualified Data.Map as M
 
 -- | An environment mapping meta-variables to funcon terms.

@@ -20,5 +20,6 @@ stepInitialise_generating fargs =
             env <- getMutPatt "used-atom-set" [VPWildCard] env
             putMut "used-atom-set" [reserved_atoms]
             stepTermTo (TVar "P") env
+          reserved_atoms :: Values
           reserved_atoms = Set (fromList [])
 

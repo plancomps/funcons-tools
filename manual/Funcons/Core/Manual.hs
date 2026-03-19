@@ -41,7 +41,6 @@ import Funcons.Core.Computations.TypesBuiltin hiding (library)
 --import Funcons.Core.Values.Composite.TuplesBuiltin hiding (library)
 
 import qualified Funcons.Core.Computations.Normal.GeneratingBuiltin
-import qualified Funcons.Core.Computations.AbnormalBuiltin
 import qualified Funcons.Core.Values.Composite.SetsBuiltin
 import qualified Funcons.Core.Values.Composite.MultisetsBuiltin
 --import qualified Funcons.Core.Values.Composite.ListsBuiltin

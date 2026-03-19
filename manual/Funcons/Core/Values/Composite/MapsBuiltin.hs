@@ -2,19 +2,9 @@
 
 module Funcons.Core.Values.Composite.MapsBuiltin where
 
-import Control.Applicative ((<$>))
-
 import Funcons.EDSL hiding (map_)
-import Funcons.MSOS (rewrittens)
-import Funcons.Core.Values.Primitive.BoolBuiltin
-import Funcons.Core.Values.Composite.SetsBuiltin
 
 import qualified Funcons.Operations as VAL
-
-import qualified Data.Set as S
-import qualified Data.Map as M
-
-import Data.Foldable (foldrM)
 
 library = libFromList [
     ("map-empty", fromNullaryValOp map_empty_ VAL.map_empty_)
