@@ -336,16 +336,13 @@ printTestResults fs defaults msos_ctxt msos_state wr rem_ins = do
                     
 
 -- | Evaluate a funcon term using simulated (non-IO) input.
--- Returns either an error-string or a result, the final mutable state, and the writer (output/control).
-evaluateFuncons :: Funcons -> (Either String StepRes, MSOSState SimIO, MSOSWriter)
-evaluateFuncons f =
+-- Returns either an error-string or a result containing the values of the `standard-out` entity.
+evaluateFuncons :: RunOptions -> Funcons -> Either String [Values]
+evaluateFuncons opts f =
     let -- Build the full funcon library (Core + builtin types)
         fullLib   = libUnions [Funcons.EDSL.library
                               ,Funcons.Core.Library.funcons
                               ,Funcons.Core.Manual.library]
-
-        -- Default run options (no command-line flags)
-        opts      = defaultRunOptions
 
         -- Build the MSOSReader
         msos_ctxt = MSOSReader
@@ -368,8 +365,10 @@ evaluateFuncons f =
           runSimIO (runMSOS msos_comp msos_ctxt msos_st) M.empty
 
     in case result of 
-        Left iexc     -> (Left (show iexc), finalState, writer)
-        Right sres    -> (Right sres, finalState, writer) 
+        Left iexc   -> Left (show iexc)
+        _           -> case M.lookup "standard-out" (out_entities writer) of
+                        Just vs -> Right vs
+                        _       -> Left "internal error: entity `standard-out` not utilised"
 
 
 -- $moduledoc
