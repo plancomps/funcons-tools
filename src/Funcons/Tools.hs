@@ -9,6 +9,8 @@ module Funcons.Tools (
     mkFullyFreshInterpreter, mkFreshInterpreter,
     -- * Creating embedded interpreters.
     run, runWithExtensions, runWithExtensionsNoCore, runWithExtensionsNoNothing,
+    -- * Creating evaluators
+    evaluateFuncons,
     -- * Utility functions for interpreter extensions. 
     -- ** Funcon libraries.
     FunconLibrary, libEmpty, libUnion, libOverride, libUnions, libOverrides, libFromList,
@@ -27,6 +29,7 @@ import Funcons.MSOS
 import Funcons.Core.Library
 import Funcons.Core.Manual
 import Funcons.Printer
+import Funcons.Simulation (runSimIO)
 
 import System.Environment (getArgs)
 
@@ -331,6 +334,43 @@ printTestResults fs defaults msos_ctxt msos_state wr rem_ins = do
                             val -> error ("non-list given as expected output entity ("++
                                         unpack name ++ "): " ++ showL (map showValues val))
                     
+
+-- | Evaluate a funcon term using simulated (non-IO) input.
+-- Returns either an error-string or a result, the final mutable state, and the writer (output/control).
+evaluateFuncons :: Funcons -> (Either String StepRes, MSOSState SimIO, MSOSWriter)
+evaluateFuncons f =
+    let -- Build the full funcon library (Core + builtin types)
+        fullLib   = libUnions [Funcons.EDSL.library
+                              ,Funcons.Core.Library.funcons
+                              ,Funcons.Core.Manual.library]
+
+        -- Default run options (no command-line flags)
+        opts      = defaultRunOptions
+
+        -- Build the MSOSReader
+        msos_ctxt = MSOSReader
+                      (RewriteReader fullLib Funcons.Core.Library.types opts f f)
+                      emptyINH
+                      emptyDCTRL
+                      (fread False :: Name -> SimIO Funcons)
+
+        -- Initial state: empty mutable entities, no pre-loaded input
+        msos_st   = (emptyMSOSState 0) {- seed for randomness -} { inp_es = M.empty }
+
+        -- The computation to run: set entity defaults then step to completion
+        msos_comp = setEntityDefaults Funcons.Core.Library.entities
+                      (stepTrans opts 0 (toStepRes f))
+
+        -- Execute under simulated IO (no real stdin/stdout)
+        -- fexec :: SimIO ((a, MSOSState, MSOSWriter), remaining) -> InputValues -> IO (...)
+        -- We run it with no pre-supplied input values.
+        ((result, finalState, writer), _remainingInput) =
+          runSimIO (runMSOS msos_comp msos_ctxt msos_st) M.empty
+
+    in case result of 
+        Left iexc     -> (Left (show iexc), finalState, writer)
+        Right sres    -> (Right sres, finalState, writer) 
+
 
 -- $moduledoc
 -- This module exports functions for creating executables for funcon interpeters.
